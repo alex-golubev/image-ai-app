@@ -1,5 +1,5 @@
 import { ImageRepository } from './example-repositories';
-import type { NewImageWithValidation } from './images';
+import type { NewImage, NewImageWithValidation } from './images';
 import { ZodError } from 'zod';
 
 /**
@@ -39,7 +39,7 @@ export class ImageService {
   async createImage(data: NewImageWithValidation) {
     try {
       // Validation happens through Zod schema
-      return await this.repository.create(data);
+      return await this.repository.create(data as NewImage);
     } catch (error) {
       if (error instanceof ZodError) {
         throw new Error(`Validation error: ${error.message}`);

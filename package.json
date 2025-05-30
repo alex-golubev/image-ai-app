@@ -9,19 +9,24 @@
     "lint": "next lint",
     "test:playwright": "playwright test",
     "test:playwright-show-report": "playwright show-report",
-    "prepare": "husky",
-    "postinstall": "playwright install",
     "drizzle:generate": "drizzle-kit generate:pg --config=src/db/config.ts",
     "drizzle:push": "drizzle-kit push:pg --config=src/db/config.ts",
-    "drizzle:studio": "drizzle-kit studio --config=src/db/config.ts"
+    "drizzle:studio": "drizzle-kit studio --config=src/db/config.ts",
+    "prepare": "if [ \"$NODE_ENV\" != \"production\" ]; then husky; fi",
+    "postinstall": "if [ \"$NODE_ENV\" != \"production\" ]; then playwright install; fi"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
+    "@tanstack/react-query": "^5.79.0",
+    "@trpc/client": "^11.1.4",
+    "@trpc/server": "^11.1.4",
+    "@trpc/tanstack-react-query": "^11.1.4",
     "drizzle-orm": "^0.44.0",
     "drizzle-zod": "^0.8.2",
     "next": "15.3.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "superjson": "^2.2.2",
     "zod": "^3.25.42"
   },
   "devDependencies": {
