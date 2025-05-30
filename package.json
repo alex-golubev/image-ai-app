@@ -10,12 +10,19 @@
     "test:playwright": "playwright test",
     "test:playwright-show-report": "playwright show-report",
     "prepare": "husky",
-    "postinstall": "playwright install"
+    "postinstall": "playwright install",
+    "drizzle:generate": "drizzle-kit generate:pg --config=src/db/config.ts",
+    "drizzle:push": "drizzle-kit push:pg --config=src/db/config.ts",
+    "drizzle:studio": "drizzle-kit studio --config=src/db/config.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.0",
+    "drizzle-orm": "^0.44.0",
+    "drizzle-zod": "^0.7.0",
     "next": "15.3.2",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -24,6 +31,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.1",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
     "eslint-config-prettier": "^10.1.5",
