@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
     reactRemoveProperties:
-      process.env.NODE_ENV === 'production' ? { properties: ['^data-test$'] } : false,
+      process.env.NODE_ENV === 'production' ? { properties: ['^data-testid$'] } : false,
   },
 };
 
