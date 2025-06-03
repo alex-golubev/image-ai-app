@@ -21,18 +21,25 @@ import { baseProcedure, createTRPCRouter } from '~/trpc/init';
  */
 export const rootRouter = createTRPCRouter({
   /**
-   * Simple hello procedure for testing tRPC setup.
+   * Home procedure for retrieving application title
    *
-   * Takes a name input and returns a personalized greeting message.
-   * This procedure demonstrates basic input validation and response formatting.
+   * Takes a base title and appends 'AI' suffix to create full application title.
+   * Used for displaying dynamic page titles and headers.
    *
-   * @param input - Object containing the name to greet
-   * @param input.name - The name to include in the greeting (required string)
-   * @returns Object with personalized greeting message
+   * @example
+   * ```ts
+   * // Client-side usage
+   * const { data } = api.home.useQuery({ title: 'Image' });
+   * // Returns: { text: 'Image AI' }
+   * ```
+   *
+   * @param input - Input parameters object
+   * @param input.title - Base title string to be suffixed
+   * @returns Object containing formatted title text
    */
-  hello: baseProcedure.input(z.object({ name: z.string() })).query(({ input }) => {
+  home: baseProcedure.input(z.object({ title: z.string() })).query(({ input }) => {
     return {
-      message: `Hello, ${input.name}!`,
+      text: `${input.title} AI`,
     };
   }),
 });
