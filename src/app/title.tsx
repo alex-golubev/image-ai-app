@@ -5,7 +5,7 @@ import { useTRPC } from '~/trpc/client';
 
 export default function Title() {
   const trpc = useTRPC();
-  const title = useQuery(trpc.home.queryOptions({ title: 'Image' }));
+  const title = useQuery(trpc.home.queryOptions({ title: 'image' }));
 
   return (
     <h1 className="text-4xl" data-testid="main-heading">
