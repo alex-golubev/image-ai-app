@@ -1,0 +1,64 @@
+'use client';
+
+import { createTRPCContext } from '@trpc/tanstack-react-query';
+import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
+import { createTRPCClient, httpBatchLink } from '@trpc/client';
+import type { ReactNode } from 'react';
+import { useState } from 'react';
+import type { RootRouter } from '~/trpc/routers/root';
+import { makeQueryClient } from '~/trpc/query-client';
+import { transformer } from '~/lib/transformer';
+
+/**
+ * tRPC context with React Query integration
+ * Provides TRPCProvider and useTRPC hook for the application
+ */
+export const { TRPCProvider, useTRPC } = createTRPCContext<RootRouter>();
+
+let browserQueryClient: QueryClient;
+
+/**
+ * Gets or creates a QueryClient instance
+ * Creates a new instance on server-side (SSR) and reuses singleton on client-side
+ * @returns QueryClient instance
+ */
+const getQueryClient = () =>
+  typeof window === 'undefined' ? makeQueryClient() : (browserQueryClient ??= makeQueryClient());
+
+/**
+ * Generates the appropriate tRPC endpoint URL based on environment
+ * @returns The complete tRPC API endpoint URL
+ */
+const getUrl = () => {
+  const baseUrl = (() => {
+    if (typeof window !== 'undefined') return '';
+    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+    return `http://localhost:${process.env.PORT ?? 3000}`;
+  })();
+
+  return `${baseUrl}/api/trpc`;
+};
+
+/**
+ * React provider component that sets up tRPC and React Query
+ * Wraps the application with necessary providers for tRPC functionality
+ * @param props - Component props
+ * @param props.children - Child components to wrap
+ * @returns JSX element with tRPC and QueryClient providers
+ */
+export function TRPCReactProvider({ children }: Readonly<{ children: ReactNode }>) {
+  const queryClient = getQueryClient();
+  const [trpcClient] = useState(() =>
+    createTRPCClient<RootRouter>({
+      links: [httpBatchLink({ transformer, url: getUrl() })],
+    }),
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+        {children}
+      </TRPCProvider>
+    </QueryClientProvider>
+  );
+}

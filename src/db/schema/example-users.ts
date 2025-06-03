@@ -1,8 +1,8 @@
 import { pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
-import { z } from 'zod';
 import { images } from './images';
 import { relations } from 'drizzle-orm';
+import { z } from 'zod';
 
 /**
  * Schema for users table
@@ -38,12 +38,13 @@ export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 
 // Enhanced validation schema
-export const insertUserSchemaWithValidation = insertUserSchema.extend({
-  email: z.string().email(),
+export const insertUserSchemaWithValidation = z.object({
   name: z.string().min(2).max(255),
+  email: z.string().email(),
+  avatar: z.string().optional(),
 });
 
 // Types for use in code
-export type User = z.infer<typeof selectUserSchema>;
-export type NewUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
 export type NewUserWithValidation = z.infer<typeof insertUserSchemaWithValidation>;

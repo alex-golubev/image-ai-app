@@ -15,17 +15,16 @@ export const images = pgTable('images', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Типизация для TypeScript с использованием Zod (опционально)
 export const insertImageSchema = createInsertSchema(images);
 export const selectImageSchema = createSelectSchema(images);
 
-// Дополнительные типы для более строгой валидации (опционально)
-export const insertImageSchemaWithValidation = insertImageSchema.extend({
-  url: z.string().url(),
+export const insertImageSchemaWithValidation = z.object({
   title: z.string().min(3).max(255),
+  description: z.string().optional(),
+  url: z.string().url(),
+  prompt: z.string().optional(),
 });
 
-// Типы для использования в коде
-export type Image = z.infer<typeof selectImageSchema>;
-export type NewImage = z.infer<typeof insertImageSchema>;
+export type Image = typeof images.$inferSelect;
+export type NewImage = typeof images.$inferInsert;
 export type NewImageWithValidation = z.infer<typeof insertImageSchemaWithValidation>;
