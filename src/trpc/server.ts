@@ -25,3 +25,14 @@ export const trpc = createTRPCOptionsProxy({
   router: rootRouter,
   queryClient: getQueryClient,
 });
+
+/**
+ * Direct tRPC caller for server-side usage without React Query
+ * Creates a type-safe caller instance with automatic context creation
+ * Useful for direct procedure calls in server-side code
+ * @example
+ * ```ts
+ * const result = await caller.posts.getAll();
+ * ```
+ */
+export const caller = rootRouter.createCaller(createTRPCContext);
