@@ -1,2 +1,1 @@
-// export * from './images';
-export { users } from '~/db/schema/users';
+export * from '~/db/schema/user';
