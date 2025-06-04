@@ -1,6 +1,6 @@
 import { db } from '..';
 import { images } from './images';
-import { users } from './example-users';
+import { users } from './users';
 import { eq, desc, sql } from 'drizzle-orm';
 import type { NewImage, Image } from './images';
 
