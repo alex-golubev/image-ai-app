@@ -12,8 +12,7 @@
     "drizzle:generate": "drizzle-kit generate --config=src/db/config.ts",
     "drizzle:push": "drizzle-kit push --config=src/db/config.ts",
     "drizzle:studio": "drizzle-kit studio --config=src/db/config.ts",
-    "prepare": "if [ \"$NODE_ENV\" != \"production\" ] && [ \"$CI\" != \"true\" ]; then husky; fi",
-    "postinstall": "if [ \"$NODE_ENV\" != \"production\" ] && [ \"$CI\" != \"true\" ]; then playwright install; fi"
+    "prepare": "husky"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
