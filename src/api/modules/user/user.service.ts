@@ -2,7 +2,7 @@ import { db } from '~/db';
 import { users } from '~/db/schema/user';
 import { handleDbOperation, handleDbRead } from '~/lib/db-error-handler';
 import { Entity, EntityPlural } from '~/lib/entities';
-import type { CreateUser } from './user.schema';
+import type { CreateUser, UpdateUser } from './user.schema';
 import { eq } from 'drizzle-orm';
 
 // Alternative approach using entity error handler factory:
@@ -42,7 +42,6 @@ export const getUsers = async () => {
   );
 };
 
-// Example: Get user by ID with automatic error handling
 export const getUserById = async (id: string) => {
   const result = await handleDbRead(
     () =>
@@ -65,8 +64,7 @@ export const getUserById = async (id: string) => {
   return result;
 };
 
-// Example: Update user with custom error handling
-export const updateUser = async (id: string, input: Partial<CreateUser>) => {
+export const updateUser = async ({ id, ...input }: UpdateUser) => {
   return await handleDbOperation(
     () =>
       db.update(users).set(input).where(eq(users.id, id)).returning({
@@ -83,7 +81,6 @@ export const updateUser = async (id: string, input: Partial<CreateUser>) => {
   );
 };
 
-// Example: Delete user
 export const deleteUser = async (id: string) => {
   return await handleDbOperation(
     () => db.delete(users).where(eq(users.id, id)).returning({ id: users.id }),

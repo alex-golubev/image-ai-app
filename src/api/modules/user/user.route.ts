@@ -1,11 +1,14 @@
 import { safeProcedure, createTRPCRouter } from '~/api/init';
-import { createUser, getUsers } from './user.service';
-import { createUserSchema } from './user.schema';
+import { createUser, deleteUser, getUserById, getUsers, updateUser } from './user.service';
+import { createUserSchema, updateUserSchema } from './user.schema';
+import { uuidParamSchema } from '~/lib/base-schemas';
 
 export const userRoute = createTRPCRouter({
-  createUser: safeProcedure.input(createUserSchema).mutation(({ input }) => createUser(input)),
-
   getUsers: safeProcedure.query(() => getUsers()),
+  getUserById: safeProcedure.input(uuidParamSchema).query(({ input }) => getUserById(input.id)),
+  createUser: safeProcedure.input(createUserSchema).mutation(({ input }) => createUser(input)),
+  updateUser: safeProcedure.input(updateUserSchema).mutation(({ input }) => updateUser(input)),
+  deleteUser: safeProcedure.input(uuidParamSchema).mutation(({ input }) => deleteUser(input.id)),
 });
 
 // Alternative approach using handleErrors utility:
