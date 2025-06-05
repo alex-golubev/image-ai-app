@@ -1,6 +1,6 @@
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
-import { createTRPCContext } from '~/trpc/init';
-import { rootRouter } from '~/trpc/routers/root';
+import { createTRPCContext } from '~/api/init';
+import { rootRouter } from '~/api/modules/root';
 
 /**
  * tRPC API route handler for Next.js App Router.

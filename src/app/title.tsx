@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useTRPC } from '~/trpc/client';
+import { useTRPC } from '~/api/client';
 
 export default function Title() {
   const trpc = useTRPC();
