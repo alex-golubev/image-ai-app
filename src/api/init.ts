@@ -1,4 +1,4 @@
-import { initTRPC } from '@trpc/server';
+import { initTRPC, TRPCError } from '@trpc/server';
 import { cache } from 'react';
 import { db } from '~/db';
 import { transformer } from '~/lib/transformer';
@@ -72,6 +72,72 @@ export const createTRPCRouter = t.router;
 export const baseProcedure = t.procedure;
 
 /**
+ * Error handling middleware that automatically converts service errors
+ * to appropriate tRPC errors with proper HTTP status codes.
+ */
+const errorHandlingMiddleware = t.middleware(async ({ next }) => {
+  try {
+    return await next();
+  } catch (error) {
+    if (error instanceof TRPCError) {
+      // Re-throw tRPC errors as-is
+      throw error;
+    }
+
+    if (error instanceof Error) {
+      // Map specific error messages to HTTP codes
+      if (error.message.includes('already exists')) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: error.message,
+        });
+      }
+
+      if (error.message.includes('not found')) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: error.message,
+        });
+      }
+
+      if (error.message.includes('unauthorized') || error.message.includes('forbidden')) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: error.message,
+        });
+      }
+
+      if (error.message.includes('validation') || error.message.includes('invalid')) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: error.message,
+        });
+      }
+
+      // Default to internal server error
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: error.message,
+      });
+    }
+
+    // Unknown error type
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Unknown error occurred',
+    });
+  }
+});
+
+/**
+ * Procedure with automatic error handling.
+ *
+ * Use this instead of baseProcedure when you want automatic
+ * error handling that converts service errors to tRPC errors.
+ */
+export const safeProcedure = baseProcedure.use(errorHandlingMiddleware);
+
+/**
  * Factory for creating server-side callers.
  *
  * This allows you to call tRPC procedures directly on the server
@@ -86,3 +152,100 @@ export const baseProcedure = t.procedure;
  * ```
  */
 export const createCallerFactory = t.createCallerFactory;
+
+/**
+ * Utility function for manual error handling in procedures.
+ *
+ * Use this when you need more control over error handling
+ * or want to add custom logic before error conversion.
+ *
+ * @param fn - Async function to execute
+ * @param customErrorMap - Optional custom error mapping
+ * @returns Promise with the result or throws tRPC error
+ *
+ * @example
+ * ```typescript
+ * export const customProcedure = baseProcedure
+ *   .mutation(async ({ input }) => {
+ *     return await handleErrors(async () => {
+ *       // Your logic here
+ *       return await someService(input);
+ *     }, {
+ *       'custom error': 'BAD_REQUEST'
+ *     });
+ *   });
+ * ```
+ */
+export const handleErrors = async <T>(
+  fn: () => Promise<T>,
+  customErrorMap?: Record<
+    string,
+    | 'BAD_REQUEST'
+    | 'UNAUTHORIZED'
+    | 'FORBIDDEN'
+    | 'NOT_FOUND'
+    | 'CONFLICT'
+    | 'INTERNAL_SERVER_ERROR'
+  >,
+): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof TRPCError) {
+      throw error;
+    }
+
+    if (error instanceof Error) {
+      // Check custom error mappings first
+      if (customErrorMap) {
+        for (const [errorText, code] of Object.entries(customErrorMap)) {
+          if (error.message.includes(errorText)) {
+            throw new TRPCError({
+              code,
+              message: error.message,
+            });
+          }
+        }
+      }
+
+      // Default mappings
+      if (error.message.includes('already exists')) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: error.message,
+        });
+      }
+
+      if (error.message.includes('not found')) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: error.message,
+        });
+      }
+
+      if (error.message.includes('unauthorized') || error.message.includes('forbidden')) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: error.message,
+        });
+      }
+
+      if (error.message.includes('validation') || error.message.includes('invalid')) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: error.message,
+        });
+      }
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: error.message,
+      });
+    }
+
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Unknown error occurred',
+    });
+  }
+};
