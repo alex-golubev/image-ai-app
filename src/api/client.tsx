@@ -5,8 +5,8 @@ import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import type { RootRouter } from '~/trpc/routers/root';
-import { makeQueryClient } from '~/trpc/query-client';
+import type { RootRouter } from '~/api/modules/root';
+import { makeQueryClient } from '~/api/query-client';
 import { transformer } from '~/lib/transformer';
 
 /**

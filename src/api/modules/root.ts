@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { baseProcedure, createTRPCRouter } from '~/trpc/init';
+import { baseProcedure, createTRPCRouter } from '~/api/init';
+import { userRoute } from '~/api/modules/user/user.route';
 
 /**
  * Root tRPC router containing base application procedures.
@@ -42,6 +43,7 @@ export const rootRouter = createTRPCRouter({
       text: `${input.title} AI`,
     };
   }),
+  user: userRoute,
 });
 
 /**

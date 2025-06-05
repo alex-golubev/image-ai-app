@@ -1,8 +1,8 @@
 import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
 import { cache } from 'react';
-import { makeQueryClient } from '~/trpc/query-client';
-import { createTRPCContext } from '~/trpc/init';
-import { rootRouter } from '~/trpc/routers/root';
+import { makeQueryClient } from '~/api/query-client';
+import { createTRPCContext } from '~/api/init';
+import { rootRouter } from '~/api/modules/root';
 
 /**
  * Cached QueryClient factory for server-side rendering
