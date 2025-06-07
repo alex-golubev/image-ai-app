@@ -1,0 +1,81 @@
+name: Build Check
+
+on:
+  schedule:
+    # Проверяем сборку каждый день в 6:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    # Позволяет запускать вручную
+  push:
+    branches: [main]
+    paths:
+      # Запускаем только при изменении файлов, влияющих на сборку
+      - 'package.json'
+      - 'package-lock.json'
+      - 'next.config.js'
+      - 'tsconfig.json'
+      - 'tailwind.config.ts'
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    name: Test Production Build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type check
+        run: npm run type-check
+
+      - name: Test production build
+        run: npm run build
+
+      - name: Check build output
+        run: |
+          if [ -d ".next" ]; then
+            echo "✅ Build successful - .next directory created"
+            ls -la .next/
+          else
+            echo "❌ Build failed - .next directory not found"
+            exit 1
+          fi
+
+      - name: Test build start (smoke test)
+        run: |
+          # Запускаем production server в фоне на 30 секунд
+          timeout 30s npm start &
+          sleep 10
+
+          # Проверяем, что сервер отвечает
+          if curl -f http://localhost:3000 > /dev/null 2>&1; then
+            echo "✅ Production server starts successfully"
+          else
+            echo "❌ Production server failed to start"
+            exit 1
+          fi
+
+  notify-build-status:
+    runs-on: ubuntu-latest
+    needs: build-test
+    if: failure()
+
+    steps:
+      - name: Notify build failure
+        run: |
+          echo "🚨 Production build failed!"
+          echo "This indicates potential issues with:"
+          echo "- Dependencies compatibility"
+          echo "- TypeScript configuration"
+          echo "- Next.js configuration"
+          echo "- Build process"
+          exit 1
