@@ -27,7 +27,7 @@ describe('Database Configuration', () => {
 
       // Re-require the module to trigger dotenv.config
       jest.resetModules();
-      await import('./config');
+      await import('~/db/config');
 
       expect(mockConfig).toHaveBeenCalledWith({ path: '.env.local' });
     });
@@ -39,7 +39,7 @@ describe('Database Configuration', () => {
       // Re-require the module to trigger the check
       jest.resetModules();
 
-      await expect(import('./config')).rejects.toThrow(
+      await expect(import('~/db/config')).rejects.toThrow(
         'DATABASE_URL environment variable is required',
       );
     });
@@ -51,7 +51,7 @@ describe('Database Configuration', () => {
       // Re-require the module to trigger the check
       jest.resetModules();
 
-      await expect(import('./config')).rejects.toThrow(
+      await expect(import('~/db/config')).rejects.toThrow(
         'DATABASE_URL environment variable is required',
       );
     });
@@ -63,7 +63,7 @@ describe('Database Configuration', () => {
       // Re-require the module
       jest.resetModules();
 
-      await expect(import('./config')).resolves.toBeDefined();
+      await expect(import('~/db/config')).resolves.toBeDefined();
     });
   });
 
@@ -75,19 +75,19 @@ describe('Database Configuration', () => {
     });
 
     it('exports correct schema path', async () => {
-      const config = (await import('./config')).default;
+      const config = (await import('~/db/config')).default;
 
       expect(config.schema).toBe('./src/db/schema/index.ts');
     });
 
     it('exports correct output directory', async () => {
-      const config = (await import('./config')).default;
+      const config = (await import('~/db/config')).default;
 
       expect(config.out).toBe('./drizzle');
     });
 
     it('exports correct dialect', async () => {
-      const config = (await import('./config')).default;
+      const config = (await import('~/db/config')).default;
 
       expect(config.dialect).toBe('postgresql');
     });
@@ -97,7 +97,7 @@ describe('Database Configuration', () => {
       process.env.DATABASE_URL = testUrl;
       jest.resetModules();
 
-      const config = (await import('./config')).default;
+      const config = (await import('~/db/config')).default;
 
       expect(config.dbCredentials).toEqual({
         url: testUrl,
@@ -109,7 +109,7 @@ describe('Database Configuration', () => {
       process.env.DATABASE_URL = customUrl;
       jest.resetModules();
 
-      const config = (await import('./config')).default;
+      const config = (await import('~/db/config')).default;
 
       expect(config.dbCredentials.url).toBe(customUrl);
     });
@@ -122,7 +122,7 @@ describe('Database Configuration', () => {
     });
 
     it('exports an object with all required properties', async () => {
-      const config = (await import('./config')).default;
+      const config = (await import('~/db/config')).default;
 
       expect(config).toHaveProperty('schema');
       expect(config).toHaveProperty('out');
@@ -131,7 +131,7 @@ describe('Database Configuration', () => {
     });
 
     it('has dbCredentials with url property', async () => {
-      const config = (await import('./config')).default;
+      const config = (await import('~/db/config')).default;
 
       expect(config.dbCredentials).toHaveProperty('url');
       expect(typeof config.dbCredentials.url).toBe('string');

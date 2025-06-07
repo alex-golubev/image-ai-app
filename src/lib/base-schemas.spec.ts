@@ -8,7 +8,7 @@ import {
   type Pagination,
   type Search,
   type Timestamps,
-} from './base-schemas';
+} from '~/lib/base-schemas';
 
 describe('Base Schemas', () => {
   describe('uuidParamSchema', () => {

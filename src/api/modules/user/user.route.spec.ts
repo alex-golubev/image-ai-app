@@ -45,7 +45,7 @@ import { createCallerFactory, createTRPCContext } from '~/api/init';
 import { userRoute } from '~/api/modules/user/user.route';
 
 // Mock the user service functions
-jest.mock('./user.service', () => ({
+jest.mock('~/api/modules/user/user.service', () => ({
   createUser: jest.fn(),
   deleteUser: jest.fn(),
   getUserById: jest.fn(),
@@ -54,7 +54,13 @@ jest.mock('./user.service', () => ({
 }));
 
 // Import mocked functions
-import { createUser, deleteUser, getUserById, getUsers, updateUser } from './user.service';
+import {
+  createUser,
+  deleteUser,
+  getUserById,
+  getUsers,
+  updateUser,
+} from '~/api/modules/user/user.service';
 
 const mockCreateUser = createUser as jest.MockedFunction<typeof createUser>;
 const mockDeleteUser = deleteUser as jest.MockedFunction<typeof deleteUser>;

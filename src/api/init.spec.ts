@@ -17,7 +17,12 @@ jest.mock('~/db', () => ({
 }));
 
 import { z } from 'zod';
-import { createTRPCContext, createTRPCRouter, publicProcedure, createCallerFactory } from './init';
+import {
+  createTRPCContext,
+  createTRPCRouter,
+  publicProcedure,
+  createCallerFactory,
+} from '~/api/init';
 
 describe('tRPC Init Module', () => {
   beforeEach(() => {

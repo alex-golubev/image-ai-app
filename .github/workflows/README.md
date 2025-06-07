@@ -1,124 +1,170 @@
 # GitHub Actions Workflows
 
-## 📋 Обзор
+This project uses an optimized CI/CD system with minimal workflow files for maximum efficiency.
 
-Проект использует 4 основных workflow для автоматизации CI/CD:
+## 📋 Workflow Structure
 
-| Workflow        | Триггер                        | Назначение                                 |
-| --------------- | ------------------------------ | ------------------------------------------ |
-| **Tests**       | Push/PR → main, develop        | Полное тестирование на Node.js 18.x и 20.x |
-| **CI**          | PR → main, develop             | Быстрые проверки для Pull Request          |
-| **Deploy**      | Push → main (после Tests)      | Автоматический деплой в production         |
-| **Build Check** | Schedule/Manual/Config changes | Периодическая проверка сборки              |
+### 🚀 [`ci.yml`](./ci.yml) - Main CI/CD Pipeline
 
-## 🚀 Workflows
+**Triggers:**
 
-### 1. Tests (`test.yml`)
+- `push` to `main`, `develop` branches
+- `pull_request` to `main`, `develop` branches
 
-```yaml
-Triggers: push/PR → main, develop
-Matrix: Node.js 18.x, 20.x
-Steps: ✅ Checkout code
-  ✅ Setup Node.js
-  ✅ Install dependencies
-  ✅ Run linter
-  ✅ Run type check
-  ✅ Run tests with coverage
-  ✅ Upload coverage to Codecov
-  ✅ Comment coverage on PR
-```
+**Jobs:**
 
-### 2. CI (`ci.yml`)
+#### 1. **Lint and Type Check**
 
-```yaml
-Triggers: PR → main, develop
-Jobs: 📝 lint-and-type-check
-  🧪 test-unit
-  🎭 test-e2e (Playwright)
-```
+- Code linting with ESLint
+- TypeScript type checking
+- Fast code quality validation
 
-### 3. Deploy (`deploy.yml`)
+#### 2. **Unit Tests**
 
-```yaml
-Triggers: push → main, workflow_run → Tests
-Steps: ✅ Run tests before deploy
-  ✅ Deploy to Vercel (Vercel собирает автоматически)
-  ✅ Notify deployment status
-```
+- Jest unit test execution
+- Coverage report generation
+- Coverage upload to Codecov
+- Automatic coverage comments on PRs
 
-### 4. Build Check (`build-check.yml`)
+#### 3. **E2E Tests**
 
-```yaml
-Triggers: schedule (daily), manual, config changes
-Steps: ✅ Test production build
-  ✅ Smoke test production server
-  ✅ Notify if build fails
-```
+- Playwright end-to-end testing
+- Timeout: 60 minutes
+- DATABASE_URL support from secrets
+- Automatic report uploads on failures
 
-## 📊 Текущее покрытие тестами
+**Node.js version:** `22.x`
 
-```
-Test Suites: 8 passed, 8 total
-Tests:       94 passed, 94 total
+---
 
-Coverage Summary:
-- Statements: 39.25%
-- Branches:   6.66%
-- Functions:  62.16%
-- Lines:      38.34%
+### 🏗️ [`build-check.yml`](./build-check.yml) - Production Build Validation
 
-Полное покрытие (100%):
-✅ User module (route, service, schema)
-✅ Root API module
-✅ App components (layout, page, title)
-```
+**Triggers:**
 
-## 🔧 Локальные команды
+- `schedule` - daily at 6:00 UTC
+- `workflow_dispatch` - manual trigger
+- `push` to `main` branch when build files change
+
+**Purpose:**
+
+- Next.js production build validation
+- Production server smoke testing
+- Early detection of dependency issues
+- Configuration validation
+
+**Node.js version:** `22.x`
+
+## 🔧 Setup
+
+### Required Secrets
+
+Add the following secrets in repository settings:
 
 ```bash
-# Проверки качества кода
-npm run lint           # ESLint
-npm run type-check     # TypeScript
-
-# Тестирование
-npm test              # Jest unit tests
-npm run test:coverage # Jest with coverage
-npm run test:playwright # E2E tests
-
-# Сборка
-npm run build         # Production build
-npm run dev           # Development server
+CODECOV_TOKEN=your_codecov_token
+DATABASE_URL=your_database_url_for_e2e_tests
 ```
 
-## 🛡️ Защита веток
+### Environment Variables
 
-Рекомендуется настроить branch protection rules:
+- `DATABASE_URL` - used for E2E tests
+- `GITHUB_TOKEN` - automatically provided by GitHub
 
-- Обязательные PR для main/develop
-- Обязательное прохождение всех checks
-- Code review requirement
-- Автоматическое удаление merged веток
+## 📊 Coverage Reports
 
-См. подробности в `branch-protection.md`
+- **Codecov Integration**: Automatic coverage report uploads
+- **PR Comments**: Automatic coverage change comments
+- **Threshold**: Configured in fail-safe mode (doesn't block CI on Codecov errors)
 
-## 🔑 Необходимые Secrets
+## 🎯 Optimization
+
+### What was optimized:
+
+1. **Removed duplication**: Combined 4 workflows into 2
+2. **Matrix testing**: Removed redundant testing on multiple Node.js versions
+3. **Playwright**: Integrated into main CI instead of separate workflow
+4. **Caching**: Using npm cache to speed up dependency installation
+
+### Benefits:
+
+- ⚡ **Faster**: Fewer parallel jobs
+- 💰 **Cost-effective**: Fewer GitHub Actions minutes
+- 🔧 **Simpler**: Easier to maintain and configure
+- 📈 **More reliable**: Fewer failure points
+
+## 🚦 Check Status
+
+### On Pull Request:
+
+- ✅ Lint and Type Check
+- ✅ Unit Tests + Coverage
+- ✅ E2E Tests
+- 📊 Coverage Report Comment
+
+### On Push to main/develop:
+
+- ✅ All checks from PR
+- 🏗️ Build Check (when build files change)
+
+### Scheduled:
+
+- 🏗️ Daily Build Check (6:00 UTC)
+
+## 📝 Local Development Commands
 
 ```bash
-# Codecov (опционально)
-CODECOV_TOKEN
+# Lint
+npm run lint
 
-# Vercel (для деплоя)
-VERCEL_TOKEN
-VERCEL_ORG_ID
-VERCEL_PROJECT_ID
+# Type check
+npm run type-check
+
+# Unit tests
+npm test
+
+# Unit tests with coverage
+npm test -- --coverage
+
+# E2E tests
+npm run test:playwright
+
+# Build
+npm run build
+
+# Production start
+npm start
 ```
 
-## 📈 Статус
+## 🔍 Troubleshooting
 
-- ✅ Jest тестирование настроено
-- ✅ TypeScript проверки работают
-- ✅ ESLint настроен
-- ✅ Codecov интеграция готова
-- ✅ Vercel деплой настроен
-- ✅ E2E тесты с Playwright
-- ✅ Matrix testing (Node.js 18.x, 20.x)
+### E2E Tests Failed
+
+1. Check `DATABASE_URL` in secrets
+2. Ensure all Playwright dependencies are installed
+3. Check logs in Playwright report artifacts
+
+### Build Check Failed
+
+1. Check changes in `package.json` or configuration files
+2. Ensure all dependencies are compatible
+3. Check TypeScript errors
+
+### Coverage Upload Failed
+
+1. Check `CODECOV_TOKEN` in secrets
+2. Coverage upload is configured in fail-safe mode and won't block CI
+
+## 📚 Additional Resources
+
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [Playwright Testing](https://playwright.dev/)
+- [Codecov Integration](https://docs.codecov.com/docs)
+- [Next.js Deployment](https://nextjs.org/docs/deployment)
+
+## 🔄 Updates
+
+When adding new checks or changing project structure, update the corresponding workflow files and this README.
+
+---
+
+**Last updated:** Node.js 22.x, optimized workflow structure

@@ -53,7 +53,13 @@ import { db } from '~/db';
 import { users } from '~/db/schema/user';
 
 // Import after mocking
-import { createUser, deleteUser, getUserById, getUsers, updateUser } from './user.service';
+import {
+  createUser,
+  deleteUser,
+  getUserById,
+  getUsers,
+  updateUser,
+} from '~/api/modules/user/user.service';
 
 // Get mocked instances - using any to avoid complex Drizzle types in tests
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

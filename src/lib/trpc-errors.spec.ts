@@ -7,7 +7,7 @@ import {
   throwForbidden,
   throwConflict,
   throwInternalError,
-} from './trpc-errors';
+} from '~/lib/trpc-errors';
 
 describe('tRPC Error Utilities', () => {
   describe('handleDatabaseError', () => {

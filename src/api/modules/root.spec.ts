@@ -1,8 +1,8 @@
-import { rootRouter, type RootRouter } from './root';
-import { userRoute } from './user/user.route';
+import { rootRouter, type RootRouter } from '~/api/modules/root';
+import { userRoute } from '~/api/modules/user/user.route';
 
 // Mock the user route
-jest.mock('./user/user.route', () => ({
+jest.mock('~/api/modules/user/user.route', () => ({
   userRoute: {
     getUsers: jest.fn(),
     getUserById: jest.fn(),

@@ -14,7 +14,7 @@ describe('Database Schema Index', () => {
 
   describe('Module Structure', () => {
     it('exports all items from user schema', async () => {
-      const schemaIndex = await import('./index');
+      const schemaIndex = await import('~/db/schema/index');
 
       // Import user schema directly to compare
       const userSchema = await import('~/db/schema/user');
@@ -30,7 +30,7 @@ describe('Database Schema Index', () => {
     });
 
     it('re-exports are properly typed', async () => {
-      const schemaIndex = await import('./index');
+      const schemaIndex = await import('~/db/schema/index');
 
       // Check that exports maintain their types
       expect(schemaIndex).toBeDefined();
@@ -38,7 +38,7 @@ describe('Database Schema Index', () => {
     });
 
     it('does not have default export', async () => {
-      const schemaIndex = await import('./index');
+      const schemaIndex = await import('~/db/schema/index');
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((schemaIndex as any).default).toBeUndefined();
@@ -93,7 +93,7 @@ describe('Database Schema Index', () => {
 
   describe('Export Validation', () => {
     it('all exports should be valid Drizzle schema objects', async () => {
-      const schemaIndex = await import('./index');
+      const schemaIndex = await import('~/db/schema/index');
 
       // Get all exports
       const exports = Object.keys(schemaIndex);
@@ -108,7 +108,7 @@ describe('Database Schema Index', () => {
     });
 
     it('should not export undefined values', async () => {
-      const schemaIndex = await import('./index');
+      const schemaIndex = await import('~/db/schema/index');
 
       const exports = Object.keys(schemaIndex);
 
@@ -121,7 +121,7 @@ describe('Database Schema Index', () => {
     });
 
     it('maintains consistent export names', async () => {
-      const schemaIndex = await import('./index');
+      const schemaIndex = await import('~/db/schema/index');
       const userSchema = await import('~/db/schema/user');
 
       // Export names should match between source and re-export
@@ -181,7 +181,7 @@ export * from '~/db/schema/comment';
   describe('Future-Proof Testing', () => {
     it('should handle new schema additions gracefully', async () => {
       // This test ensures the barrel file pattern works for future schemas
-      const schemaIndex = await import('./index');
+      const schemaIndex = await import('~/db/schema/index');
 
       // The index should be an object that can accept new exports
       expect(typeof schemaIndex).toBe('object');
@@ -209,7 +209,7 @@ export * from '~/db/schema/comment';
 
     it('can be extended with new schemas without breaking', async () => {
       // Simulate adding a new schema
-      const currentSchemaIndex = await import('./index');
+      const currentSchemaIndex = await import('~/db/schema/index');
       const currentExports = Object.keys(currentSchemaIndex);
 
       // The current structure should support adding new exports
@@ -226,7 +226,7 @@ export * from '~/db/schema/comment';
 
   describe('Integration with Drizzle ORM', () => {
     it('exports are compatible with Drizzle schema format', async () => {
-      const schemaIndex = await import('./index');
+      const schemaIndex = await import('~/db/schema/index');
 
       // All exports should be objects (Drizzle tables/schemas)
       Object.values(schemaIndex).forEach((exportValue) => {
@@ -236,7 +236,7 @@ export * from '~/db/schema/comment';
     });
 
     it('can be used as schema parameter in Drizzle config', async () => {
-      const schemaIndex = await import('./index');
+      const schemaIndex = await import('~/db/schema/index');
 
       // Should be able to spread into Drizzle config
       expect(() => ({ ...schemaIndex })).not.toThrow();
@@ -247,7 +247,7 @@ export * from '~/db/schema/comment';
     });
 
     it('maintains proper TypeScript module structure', async () => {
-      const schemaIndex = await import('./index');
+      const schemaIndex = await import('~/db/schema/index');
 
       // Should be importable as ES module
       expect(schemaIndex).toBeDefined();
@@ -259,7 +259,7 @@ export * from '~/db/schema/comment';
 
   describe('Performance Considerations', () => {
     it('does not create unnecessary object copies', async () => {
-      const schemaIndex = await import('./index');
+      const schemaIndex = await import('~/db/schema/index');
       const userSchema = await import('~/db/schema/user');
 
       // Re-exports should reference the same objects, not copies
@@ -274,7 +274,7 @@ export * from '~/db/schema/comment';
 
     it('supports tree shaking', async () => {
       // Barrel exports with `export *` support tree shaking
-      const schemaIndex = await import('./index');
+      const schemaIndex = await import('~/db/schema/index');
 
       // Should be able to destructure specific exports
       expect(() => {

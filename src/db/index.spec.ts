@@ -47,7 +47,7 @@ describe('Database Index', () => {
 
       // Re-import the module to trigger initialization
       jest.resetModules();
-      await import('./index');
+      await import('~/db/index');
 
       expect(mockNeon).toHaveBeenCalledWith(testUrl);
     });
@@ -64,7 +64,7 @@ describe('Database Index', () => {
 
       // Re-import the module to trigger initialization
       jest.resetModules();
-      await import('./index');
+      await import('~/db/index');
 
       expect(mockDrizzle).toHaveBeenCalledWith(mockSql, {
         schema: expect.objectContaining(mockSchema),
@@ -83,7 +83,7 @@ describe('Database Index', () => {
 
       // Re-import the module
       jest.resetModules();
-      const dbModule = await import('./index');
+      const dbModule = await import('~/db/index');
 
       expect(dbModule.db).toBeDefined();
       expect(dbModule.db).toBe(mockDb);
@@ -103,7 +103,7 @@ describe('Database Index', () => {
       // Re-import the module
       jest.resetModules();
 
-      await expect(import('./index')).rejects.toThrow();
+      await expect(import('~/db/index')).rejects.toThrow();
     });
   });
 
@@ -119,7 +119,7 @@ describe('Database Index', () => {
       mockDrizzle.mockReturnValue(mockDb);
 
       jest.resetModules();
-      await import('./index');
+      await import('~/db/index');
 
       const drizzleCall = mockDrizzle.mock.calls[0];
       expect(drizzleCall[1]).toHaveProperty('casing', 'snake_case');
@@ -132,7 +132,7 @@ describe('Database Index', () => {
       mockDrizzle.mockReturnValue(mockDb);
 
       jest.resetModules();
-      await import('./index');
+      await import('~/db/index');
 
       const drizzleCall = mockDrizzle.mock.calls[0];
       expect(drizzleCall[1].schema).toEqual(expect.objectContaining(mockSchema));
@@ -145,7 +145,7 @@ describe('Database Index', () => {
       mockDrizzle.mockReturnValue(mockDb);
 
       jest.resetModules();
-      await import('./index');
+      await import('~/db/index');
 
       const drizzleCall = mockDrizzle.mock.calls[0];
       expect(drizzleCall[0]).toBe(mockSql);
@@ -169,7 +169,7 @@ describe('Database Index', () => {
         mockDrizzle.mockReturnValue(mockDb);
 
         jest.resetModules();
-        await import('./index');
+        await import('~/db/index');
 
         expect(mockNeon).toHaveBeenCalledWith(url);
         jest.clearAllMocks();
@@ -188,7 +188,7 @@ describe('Database Index', () => {
       jest.resetModules();
 
       // Should not throw with valid URL
-      await expect(import('./index')).resolves.toBeDefined();
+      await expect(import('~/db/index')).resolves.toBeDefined();
     });
   });
 
@@ -204,7 +204,7 @@ describe('Database Index', () => {
       mockDrizzle.mockReturnValue(mockDb);
 
       jest.resetModules();
-      const dbModule = await import('./index');
+      const dbModule = await import('~/db/index');
 
       const exports = Object.keys(dbModule);
       expect(exports).toEqual(['db']);
@@ -217,7 +217,7 @@ describe('Database Index', () => {
       mockDrizzle.mockReturnValue(mockDb);
 
       jest.resetModules();
-      const { db } = await import('./index');
+      const { db } = await import('~/db/index');
 
       expect(db).toBeDefined();
       expect(db).toBe(mockDb);

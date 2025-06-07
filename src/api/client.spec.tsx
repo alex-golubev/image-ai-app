@@ -7,7 +7,7 @@ import {
   getBaseUrl,
   getUrl,
   getQueryClient,
-} from './client';
+} from '~/api/client';
 
 // Mock tRPC dependencies
 jest.mock('@trpc/tanstack-react-query', () => ({
