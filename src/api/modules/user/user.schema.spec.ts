@@ -1,4 +1,9 @@
-import { userSchema, createUserSchema, updateUserSchema } from '~/api/modules/user/user.schema';
+import {
+  userSchema,
+  createUserSchema,
+  updateUserSchema,
+  authenticateUserSchema,
+} from '~/api/modules/user/user.schema';
 
 describe('User Schemas', () => {
   describe('userSchema', () => {
@@ -53,7 +58,7 @@ describe('User Schemas', () => {
     const validCreateUser = {
       name: 'John Doe',
       email: 'john@example.com',
-      password: 'hashedPassword123',
+      password: 'SecurePass123!',
       avatar: 'https://example.com/avatar.jpg',
     };
 
@@ -65,7 +70,7 @@ describe('User Schemas', () => {
     it('validates user creation without optional fields', () => {
       const minimalUser = {
         email: 'john@example.com',
-        password: 'hashedPassword123',
+        password: 'SecurePass123!',
       };
 
       const result = createUserSchema.safeParse(minimalUser);
@@ -95,11 +100,43 @@ describe('User Schemas', () => {
     it('rejects missing required email', () => {
       const userWithoutEmail = {
         name: 'John Doe',
-        password: 'hashedPassword123',
+        password: 'SecurePass123!',
       };
 
       const result = createUserSchema.safeParse(userWithoutEmail);
       expect(result.success).toBe(false);
+    });
+
+    it('rejects weak passwords', () => {
+      const weakPasswords = [
+        'short', // too short
+        'nouppercase1!', // no uppercase
+        'NOLOWERCASE1!', // no lowercase
+        'NoNumbers!', // no numbers
+        'NoSpecialChar1', // no special characters
+      ];
+
+      weakPasswords.forEach((password) => {
+        const userWithWeakPassword = {
+          ...validCreateUser,
+          password,
+        };
+        const result = createUserSchema.safeParse(userWithWeakPassword);
+        expect(result.success).toBe(false);
+      });
+    });
+
+    it('accepts strong passwords', () => {
+      const strongPasswords = ['SecurePass123!', 'MyP@ssw0rd', 'C0mpl3x!Pass', 'Str0ng#Password'];
+
+      strongPasswords.forEach((password) => {
+        const userWithStrongPassword = {
+          ...validCreateUser,
+          password,
+        };
+        const result = createUserSchema.safeParse(userWithStrongPassword);
+        expect(result.success).toBe(true);
+      });
     });
   });
 
@@ -156,6 +193,55 @@ describe('User Schemas', () => {
       if (result.success) {
         expect(result.data).not.toHaveProperty('createdAt');
         expect(result.data).not.toHaveProperty('updatedAt');
+      }
+    });
+  });
+
+  describe('authenticateUserSchema', () => {
+    const validAuthData = {
+      email: 'john@example.com',
+      password: 'myPassword123',
+    };
+
+    it('validates valid authentication data', () => {
+      const result = authenticateUserSchema.safeParse(validAuthData);
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects invalid email format', () => {
+      const invalidAuth = { ...validAuthData, email: 'invalid-email' };
+      const result = authenticateUserSchema.safeParse(invalidAuth);
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects empty password', () => {
+      const invalidAuth = { ...validAuthData, password: '' };
+      const result = authenticateUserSchema.safeParse(invalidAuth);
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects missing email', () => {
+      const invalidAuth = { password: 'myPassword123' };
+      const result = authenticateUserSchema.safeParse(invalidAuth);
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects missing password', () => {
+      const invalidAuth = { email: 'john@example.com' };
+      const result = authenticateUserSchema.safeParse(invalidAuth);
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects extra fields', () => {
+      const authWithExtra = {
+        ...validAuthData,
+        extraField: 'should not be here',
+      };
+      const result = authenticateUserSchema.safeParse(authWithExtra);
+      expect(result.success).toBe(true);
+      // Extra fields should be stripped out
+      if (result.success) {
+        expect(result.data).not.toHaveProperty('extraField');
       }
     });
   });

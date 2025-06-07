@@ -51,7 +51,30 @@ jest.mock('~/api/modules/user/user.service', () => ({
   getUserById: jest.fn(),
   getUsers: jest.fn(),
   updateUser: jest.fn(),
+  authenticateUser: jest.fn(),
 }));
+
+// Mock the rate limiter
+jest.mock('~/lib/rate-limiter', () => ({
+  authRateLimit: {
+    isLimited: jest.fn(),
+    getTimeRemaining: jest.fn(),
+    recordSuccess: jest.fn(),
+    recordFailed: jest.fn(),
+  },
+}));
+
+// Mock the tRPC context creation to avoid Next.js headers() issues in tests
+jest.mock('~/api/init', () => {
+  const originalModule = jest.requireActual('~/api/init');
+  return {
+    ...originalModule,
+    createTRPCContext: jest.fn().mockResolvedValue({
+      db: {},
+      clientIP: '127.0.0.1',
+    }),
+  };
+});
 
 // Import mocked functions
 import {
@@ -60,13 +83,19 @@ import {
   getUserById,
   getUsers,
   updateUser,
+  authenticateUser,
 } from '~/api/modules/user/user.service';
+import { authRateLimit } from '~/lib/rate-limiter';
 
 const mockCreateUser = createUser as jest.MockedFunction<typeof createUser>;
 const mockDeleteUser = deleteUser as jest.MockedFunction<typeof deleteUser>;
 const mockGetUserById = getUserById as jest.MockedFunction<typeof getUserById>;
 const mockGetUsers = getUsers as jest.MockedFunction<typeof getUsers>;
 const mockUpdateUser = updateUser as jest.MockedFunction<typeof updateUser>;
+const mockAuthenticateUser = authenticateUser as jest.MockedFunction<typeof authenticateUser>;
+
+// Type the mocked rate limiter
+const mockAuthRateLimit = authRateLimit as jest.Mocked<typeof authRateLimit>;
 
 describe('User Route', () => {
   const callerFactory = createCallerFactory(userRoute);
@@ -74,6 +103,11 @@ describe('User Route', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    // Reset rate limiter mocks to default behavior
+    mockAuthRateLimit.isLimited.mockReturnValue(false);
+    mockAuthRateLimit.getTimeRemaining.mockReturnValue(0);
+
     const context = await createTRPCContext();
     caller = callerFactory(context);
   });
@@ -141,7 +175,7 @@ describe('User Route', () => {
     const mockCreateInput = {
       name: 'John Doe',
       email: 'john@example.com',
-      password: 'hashedPassword123',
+      password: 'SecurePass123!',
     };
 
     const mockCreatedUser = [
@@ -272,6 +306,109 @@ describe('User Route', () => {
 
     it('validates input schema - rejects invalid UUID', async () => {
       await expect(caller.deleteUser({ id: 'invalid-uuid' })).rejects.toThrow();
+    });
+  });
+
+  describe('authenticate', () => {
+    const mockAuthInput = {
+      email: 'john@example.com',
+      password: 'plainPassword123',
+    };
+
+    const mockAuthenticatedUser = {
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      name: 'John Doe',
+      email: 'john@example.com',
+      avatar: null,
+    };
+
+    it('authenticates user successfully', async () => {
+      mockAuthenticateUser.mockResolvedValue(mockAuthenticatedUser);
+
+      const result = await caller.authenticate(mockAuthInput);
+
+      expect(mockAuthenticateUser).toHaveBeenCalledWith(
+        mockAuthInput.email,
+        mockAuthInput.password,
+      );
+      expect(result).toEqual(mockAuthenticatedUser);
+    });
+
+    it('throws UNAUTHORIZED error when user not found', async () => {
+      const error = new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'Invalid email or password',
+      });
+      mockAuthenticateUser.mockRejectedValue(error);
+
+      await expect(caller.authenticate(mockAuthInput)).rejects.toThrow(error);
+    });
+
+    it('throws UNAUTHORIZED error for invalid password', async () => {
+      const error = new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'Invalid email or password',
+      });
+      mockAuthenticateUser.mockRejectedValue(error);
+
+      await expect(caller.authenticate(mockAuthInput)).rejects.toThrow(error);
+    });
+
+    it('validates input schema - rejects invalid email', async () => {
+      await expect(
+        caller.authenticate({
+          email: 'invalid-email',
+          password: 'password123',
+        }),
+      ).rejects.toThrow();
+    });
+
+    it('validates input schema - rejects empty password', async () => {
+      await expect(
+        caller.authenticate({
+          email: 'john@example.com',
+          password: '',
+        }),
+      ).rejects.toThrow();
+    });
+
+    it('throws TOO_MANY_REQUESTS when rate limited', async () => {
+      mockAuthRateLimit.isLimited.mockReturnValue(true);
+      mockAuthRateLimit.getTimeRemaining.mockReturnValue(15 * 60 * 1000); // 15 minutes
+
+      await expect(caller.authenticate(mockAuthInput)).rejects.toThrow(
+        new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: 'Too many failed login attempts. Please try again in 15 minutes.',
+        }),
+      );
+
+      expect(mockAuthRateLimit.isLimited).toHaveBeenCalledWith('127.0.0.1');
+      expect(mockAuthRateLimit.getTimeRemaining).toHaveBeenCalledWith('127.0.0.1');
+      expect(mockAuthenticateUser).not.toHaveBeenCalled();
+    });
+
+    it('records successful attempt on successful authentication', async () => {
+      mockAuthRateLimit.isLimited.mockReturnValue(false);
+      mockAuthenticateUser.mockResolvedValue(mockAuthenticatedUser);
+
+      const result = await caller.authenticate(mockAuthInput);
+
+      expect(mockAuthRateLimit.recordSuccess).toHaveBeenCalledWith('127.0.0.1');
+      expect(result).toEqual(mockAuthenticatedUser);
+    });
+
+    it('records failed attempt on authentication failure', async () => {
+      mockAuthRateLimit.isLimited.mockReturnValue(false);
+      const error = new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'Invalid email or password',
+      });
+      mockAuthenticateUser.mockRejectedValue(error);
+
+      await expect(caller.authenticate(mockAuthInput)).rejects.toThrow(error);
+
+      expect(mockAuthRateLimit.recordFailed).toHaveBeenCalledWith('127.0.0.1');
     });
   });
 });

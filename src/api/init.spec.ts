@@ -6,6 +6,21 @@ jest.mock('superjson', () => ({
   parse: jest.fn((data) => JSON.parse(data)),
 }));
 
+// Mock next/headers
+jest.mock('next/headers', () => ({
+  headers: jest.fn(() =>
+    Promise.resolve({
+      get: jest.fn((header: string) => {
+        if (header === 'x-forwarded-for') return '192.168.1.100';
+        if (header === 'x-real-ip') return null;
+        if (header === 'cf-connecting-ip') return null;
+        if (header === 'x-client-ip') return null;
+        return null;
+      }),
+    }),
+  ),
+}));
+
 // Mock database
 jest.mock('~/db', () => ({
   db: {
@@ -34,7 +49,9 @@ describe('tRPC Init Module', () => {
       const context = await createTRPCContext();
 
       expect(context).toHaveProperty('db');
+      expect(context).toHaveProperty('clientIP');
       expect(context.db).toBeDefined();
+      expect(context.clientIP).toBe('192.168.1.100');
     });
 
     it('creates new context on each call', async () => {
@@ -42,9 +59,109 @@ describe('tRPC Init Module', () => {
       const context2 = await createTRPCContext();
 
       expect(context1).toHaveProperty('db');
+      expect(context1).toHaveProperty('clientIP');
       expect(context2).toHaveProperty('db');
+      expect(context2).toHaveProperty('clientIP');
       expect(context1.db).toBeDefined();
       expect(context2.db).toBeDefined();
+      expect(context1.clientIP).toBe('192.168.1.100');
+      expect(context2.clientIP).toBe('192.168.1.100');
+    });
+
+    it('gets IP from x-real-ip when x-forwarded-for is not available', async () => {
+      const { headers } = await import('next/headers');
+      const mockHeaders = headers as jest.MockedFunction<typeof headers>;
+
+      mockHeaders.mockResolvedValueOnce({
+        get: jest.fn((header: string) => {
+          if (header === 'x-forwarded-for') return null;
+          if (header === 'x-real-ip') return '10.0.0.1';
+          if (header === 'cf-connecting-ip') return null;
+          if (header === 'x-client-ip') return null;
+          return null;
+        }),
+      } as unknown as Awaited<ReturnType<typeof headers>>);
+
+      const context = await createTRPCContext();
+      expect(context.clientIP).toBe('10.0.0.1');
+    });
+
+    it('gets IP from cf-connecting-ip when x-forwarded-for and x-real-ip are not available', async () => {
+      const { headers } = await import('next/headers');
+      const mockHeaders = headers as jest.MockedFunction<typeof headers>;
+
+      mockHeaders.mockResolvedValueOnce({
+        get: jest.fn((header: string) => {
+          if (header === 'x-forwarded-for') return null;
+          if (header === 'x-real-ip') return null;
+          if (header === 'cf-connecting-ip') return '172.16.0.1';
+          if (header === 'x-client-ip') return null;
+          return null;
+        }),
+      } as unknown as Awaited<ReturnType<typeof headers>>);
+
+      const context = await createTRPCContext();
+      expect(context.clientIP).toBe('172.16.0.1');
+    });
+
+    it('gets IP from x-client-ip when other headers are not available', async () => {
+      const { headers } = await import('next/headers');
+      const mockHeaders = headers as jest.MockedFunction<typeof headers>;
+
+      mockHeaders.mockResolvedValueOnce({
+        get: jest.fn((header: string) => {
+          if (header === 'x-forwarded-for') return null;
+          if (header === 'x-real-ip') return null;
+          if (header === 'cf-connecting-ip') return null;
+          if (header === 'x-client-ip') return '203.0.113.1';
+          return null;
+        }),
+      } as unknown as Awaited<ReturnType<typeof headers>>);
+
+      const context = await createTRPCContext();
+      expect(context.clientIP).toBe('203.0.113.1');
+    });
+
+    it('falls back to localhost when no IP headers are available', async () => {
+      const { headers } = await import('next/headers');
+      const mockHeaders = headers as jest.MockedFunction<typeof headers>;
+
+      mockHeaders.mockResolvedValueOnce({
+        get: jest.fn(() => null),
+      } as unknown as Awaited<ReturnType<typeof headers>>);
+
+      const context = await createTRPCContext();
+      expect(context.clientIP).toBe('127.0.0.1');
+    });
+
+    it('handles x-forwarded-for with multiple IPs (takes first one)', async () => {
+      const { headers } = await import('next/headers');
+      const mockHeaders = headers as jest.MockedFunction<typeof headers>;
+
+      mockHeaders.mockResolvedValueOnce({
+        get: jest.fn((header: string) => {
+          if (header === 'x-forwarded-for') return '203.0.113.1, 198.51.100.1, 192.0.2.1';
+          return null;
+        }),
+      } as unknown as Awaited<ReturnType<typeof headers>>);
+
+      const context = await createTRPCContext();
+      expect(context.clientIP).toBe('203.0.113.1');
+    });
+
+    it('handles x-forwarded-for with spaces around IPs', async () => {
+      const { headers } = await import('next/headers');
+      const mockHeaders = headers as jest.MockedFunction<typeof headers>;
+
+      mockHeaders.mockResolvedValueOnce({
+        get: jest.fn((header: string) => {
+          if (header === 'x-forwarded-for') return ' 203.0.113.1 , 198.51.100.1 ';
+          return null;
+        }),
+      } as unknown as Awaited<ReturnType<typeof headers>>);
+
+      const context = await createTRPCContext();
+      expect(context.clientIP).toBe('203.0.113.1');
     });
   });
 
@@ -78,6 +195,7 @@ describe('tRPC Init Module', () => {
       const testRouter = createTRPCRouter({
         contextTest: publicProcedure.query(({ ctx }) => {
           expect(ctx).toHaveProperty('db');
+          expect(ctx).toHaveProperty('clientIP');
           return 'context available';
         }),
       });
@@ -157,7 +275,9 @@ describe('tRPC Init Module', () => {
       const result2 = await caller2.getContext();
 
       expect(result1).toHaveProperty('db');
+      expect(result1).toHaveProperty('clientIP');
       expect(result2).toHaveProperty('db');
+      expect(result2).toHaveProperty('clientIP');
     });
   });
 
@@ -166,12 +286,14 @@ describe('tRPC Init Module', () => {
       const testRouter = createTRPCRouter({
         getUser: publicProcedure.input(z.object({ id: z.string() })).query(({ input, ctx }) => {
           expect(ctx).toHaveProperty('db');
+          expect(ctx).toHaveProperty('clientIP');
           return { id: input.id, name: 'Test User' };
         }),
         createUser: publicProcedure
           .input(z.object({ name: z.string() }))
           .mutation(({ input, ctx }) => {
             expect(ctx).toHaveProperty('db');
+            expect(ctx).toHaveProperty('clientIP');
             return { id: '123', name: input.name };
           }),
       });

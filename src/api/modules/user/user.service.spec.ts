@@ -48,9 +48,16 @@ jest.mock('~/db/schema/user', () => ({
   },
 }));
 
+// Mock password utilities
+jest.mock('~/lib/password', () => ({
+  hashPassword: jest.fn(),
+  verifyPassword: jest.fn(),
+}));
+
 import { TRPCError } from '@trpc/server';
 import { db } from '~/db';
 import { users } from '~/db/schema/user';
+import { hashPassword, verifyPassword } from '~/lib/password';
 
 // Import after mocking
 import {
@@ -59,6 +66,7 @@ import {
   getUserById,
   getUsers,
   updateUser,
+  authenticateUser,
 } from '~/api/modules/user/user.service';
 
 // Get mocked instances - using any to avoid complex Drizzle types in tests
@@ -66,6 +74,10 @@ import {
 const mockDb = db as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockUsers = users as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockHashPassword = hashPassword as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockVerifyPassword = verifyPassword as any;
 
 describe('User Service', () => {
   beforeEach(() => {
@@ -76,7 +88,7 @@ describe('User Service', () => {
     const mockUserInput = {
       name: 'John Doe',
       email: 'john@example.com',
-      password: 'hashedPassword123',
+      password: 'plainPassword123',
     };
 
     const mockUserOutput = {
@@ -87,6 +99,9 @@ describe('User Service', () => {
     };
 
     it('creates a user successfully', async () => {
+      const hashedPassword = 'hashedPassword123';
+      mockHashPassword.mockResolvedValue(hashedPassword);
+
       const mockInsert = {
         values: jest.fn().mockReturnThis(),
         returning: jest.fn().mockResolvedValue([mockUserOutput]),
@@ -95,8 +110,12 @@ describe('User Service', () => {
 
       const result = await createUser(mockUserInput);
 
+      expect(mockHashPassword).toHaveBeenCalledWith(mockUserInput.password);
       expect(mockDb.insert).toHaveBeenCalledWith(mockUsers);
-      expect(mockInsert.values).toHaveBeenCalledWith(mockUserInput);
+      expect(mockInsert.values).toHaveBeenCalledWith({
+        ...mockUserInput,
+        password: hashedPassword,
+      });
       expect(mockInsert.returning).toHaveBeenCalledWith({
         id: mockUsers.id,
         name: mockUsers.name,
@@ -246,6 +265,33 @@ describe('User Service', () => {
       expect(result).toEqual([mockUserOutput]);
     });
 
+    it('updates user with password successfully', async () => {
+      const mockUpdateInputWithPassword = {
+        ...mockUpdateInput,
+        password: 'newPlainPassword',
+      };
+      const hashedPassword = 'newHashedPassword';
+      mockHashPassword.mockResolvedValue(hashedPassword);
+
+      const mockUpdate = {
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        returning: jest.fn().mockResolvedValue([mockUserOutput]),
+      };
+      mockDb.update.mockReturnValue(mockUpdate);
+
+      const result = await updateUser(mockUpdateInputWithPassword);
+
+      expect(mockHashPassword).toHaveBeenCalledWith('newPlainPassword');
+      expect(mockDb.update).toHaveBeenCalledWith(mockUsers);
+      expect(mockUpdate.set).toHaveBeenCalledWith({
+        name: mockUpdateInput.name,
+        email: mockUpdateInput.email,
+        password: hashedPassword,
+      });
+      expect(result).toEqual([mockUserOutput]);
+    });
+
     it('throws NOT_FOUND error when user does not exist', async () => {
       const mockUpdate = {
         set: jest.fn().mockReturnThis(),
@@ -332,6 +378,76 @@ describe('User Service', () => {
 
       await expect(deleteUser(userId)).rejects.toThrow(TRPCError);
       await expect(deleteUser(userId)).rejects.toThrow('Database error while processing user');
+    });
+  });
+
+  describe('authenticateUser', () => {
+    const email = 'john@example.com';
+    const plainPassword = 'plainPassword123';
+    const hashedPassword = 'hashedPassword123';
+
+    const mockUserWithPassword = {
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      name: 'John Doe',
+      email: email,
+      avatar: null,
+      password: hashedPassword,
+    };
+
+    const mockUserWithoutPassword = {
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      name: 'John Doe',
+      email: email,
+      avatar: null,
+    };
+
+    it('authenticates user successfully with correct password', async () => {
+      mockDb.query.users.findFirst.mockResolvedValue(mockUserWithPassword);
+      mockVerifyPassword.mockResolvedValue(true);
+
+      const result = await authenticateUser(email, plainPassword);
+
+      expect(mockDb.query.users.findFirst).toHaveBeenCalledWith({
+        where: expect.any(Object), // eq(users.email, email)
+        columns: {
+          id: true,
+          name: true,
+          email: true,
+          avatar: true,
+          password: true,
+        },
+      });
+      expect(mockVerifyPassword).toHaveBeenCalledWith(plainPassword, hashedPassword);
+      expect(result).toEqual(mockUserWithoutPassword);
+    });
+
+    it('throws UNAUTHORIZED error when user does not exist', async () => {
+      mockDb.query.users.findFirst.mockResolvedValue(null);
+      mockVerifyPassword.mockResolvedValue(false);
+
+      await expect(authenticateUser(email, plainPassword)).rejects.toThrow(TRPCError);
+      await expect(authenticateUser(email, plainPassword)).rejects.toThrow(
+        'Invalid email or password',
+      );
+    });
+
+    it('throws UNAUTHORIZED error for incorrect password', async () => {
+      mockDb.query.users.findFirst.mockResolvedValue(mockUserWithPassword);
+      mockVerifyPassword.mockResolvedValue(false);
+
+      await expect(authenticateUser(email, plainPassword)).rejects.toThrow(TRPCError);
+      await expect(authenticateUser(email, plainPassword)).rejects.toThrow(
+        'Invalid email or password',
+      );
+    });
+
+    it('throws INTERNAL_SERVER_ERROR for database errors', async () => {
+      mockDb.query.users.findFirst.mockRejectedValue(new Error('Database connection failed'));
+
+      await expect(authenticateUser(email, plainPassword)).rejects.toThrow(TRPCError);
+      await expect(authenticateUser(email, plainPassword)).rejects.toThrow(
+        'Database error while processing user',
+      );
     });
   });
 });

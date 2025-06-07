@@ -1,1 +1,2 @@
 npm run test:playwright
+npm test

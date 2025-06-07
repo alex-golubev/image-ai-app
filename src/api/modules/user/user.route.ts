@@ -1,3 +1,4 @@
+import { TRPCError } from '@trpc/server';
 import { publicProcedure, createTRPCRouter } from '~/api/init';
 import {
   createUser,
@@ -5,9 +6,15 @@ import {
   getUserById,
   getUsers,
   updateUser,
+  authenticateUser,
 } from '~/api/modules/user/user.service';
-import { createUserSchema, updateUserSchema } from '~/api/modules/user/user.schema';
+import {
+  createUserSchema,
+  updateUserSchema,
+  authenticateUserSchema,
+} from '~/api/modules/user/user.schema';
 import { uuidParamSchema } from '~/lib/base-schemas';
+import { authRateLimit } from '~/lib/rate-limiter';
 
 /**
  * tRPC router for user-related operations
@@ -19,6 +26,7 @@ import { uuidParamSchema } from '~/lib/base-schemas';
  * - createUser: Creates a new user
  * - updateUser: Updates an existing user
  * - deleteUser: Deletes a user by ID
+ * - authenticate: Authenticates a user by email and password (with rate limiting)
  *
  * @example
  * ```ts
@@ -28,7 +36,11 @@ import { uuidParamSchema } from '~/lib/base-schemas';
  * const newUser = await trpc.user.createUser.mutate({
  *   name: "John Doe",
  *   email: "john@example.com",
- *   password: "hashedPassword"
+ *   password: "plainTextPassword"
+ * });
+ * const authenticatedUser = await trpc.user.authenticate.mutate({
+ *   email: "john@example.com",
+ *   password: "plainTextPassword"
  * });
  * ```
  */
@@ -47,16 +59,35 @@ export const userRoute = createTRPCRouter({
 
   /** Deletes a user by their UUID */
   deleteUser: publicProcedure.input(uuidParamSchema).mutation(({ input }) => deleteUser(input.id)),
-});
 
-// Alternative approach using handleErrors utility:
-// import { baseProcedure, createTRPCRouter, handleErrors } from '~/api/init';
-//
-// export const userRoute = createTRPCRouter({
-//   createUser: baseProcedure.input(createUserSchema).mutation(async ({ input }) => {
-//     return await handleErrors(
-//       () => createUser(input),
-//       { 'duplicate email': 'CONFLICT' } // Custom error mapping
-//     );
-//   }),
-// });
+  /** Authenticates a user by email and password with rate limiting */
+  authenticate: publicProcedure.input(authenticateUserSchema).mutation(async ({ input, ctx }) => {
+    const { clientIP } = ctx;
+
+    // Check rate limiting
+    if (authRateLimit.isLimited(clientIP)) {
+      const timeUntilUnblocked = authRateLimit.getTimeRemaining(clientIP);
+      const minutesRemaining = Math.ceil(timeUntilUnblocked / (1000 * 60));
+
+      throw new TRPCError({
+        code: 'TOO_MANY_REQUESTS',
+        message: `Too many failed login attempts. Please try again in ${minutesRemaining} minutes.`,
+      });
+    }
+
+    try {
+      const user = await authenticateUser(input.email, input.password);
+
+      // Record successful attempt
+      authRateLimit.recordSuccess(clientIP);
+
+      return user;
+    } catch (error) {
+      // Record failed attempt for rate limiting
+      authRateLimit.recordFailed(clientIP);
+
+      // Re-throw the original error
+      throw error;
+    }
+  }),
+});
