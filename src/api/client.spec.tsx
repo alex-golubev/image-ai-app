@@ -1,6 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { TRPCReactProvider, TRPCProvider, useTRPC } from './client';
+import {
+  TRPCReactProvider,
+  TRPCProvider,
+  useTRPC,
+  getBaseUrl,
+  getUrl,
+  getQueryClient,
+} from './client';
 
 // Mock tRPC dependencies
 jest.mock('@trpc/tanstack-react-query', () => ({
@@ -136,22 +143,60 @@ describe('TRPC Client', () => {
     });
   });
 
-  describe('URL Generation Coverage', () => {
-    it('attempts to cover different URL generation paths', () => {
-      // Note: Due to the architecture of the getUrl function being called only once
-      // during useState initialization, it's challenging to test all branches in isolation.
-      // The function handles three cases:
-      // 1. Browser environment (window !== 'undefined') - returns ''
-      // 2. Server with VERCEL_URL - returns https://${VERCEL_URL}
-      // 3. Server without VERCEL_URL - returns http://localhost:${PORT ?? 3000}
+  describe('URL Generation', () => {
+    describe('getBaseUrl', () => {
+      it('returns empty string in browser environment', () => {
+        // Browser environment (window is defined in JSDOM)
+        const result = getBaseUrl();
+        expect(result).toBe('');
+      });
 
-      // This test documents the coverage limitation and ensures the component
-      // renders successfully in different environments
-      const testChild = <div data-testid="url-coverage">URL Coverage Test</div>;
-      render(<TRPCReactProvider>{testChild}</TRPCReactProvider>);
+      it('returns Vercel URL when VERCEL_URL is set', () => {
+        process.env.VERCEL_URL = 'my-app.vercel.app';
 
-      expect(screen.getByTestId('trpc-provider')).toBeInTheDocument();
-      expect(screen.getByTestId('url-coverage')).toBeInTheDocument();
+        const result = getBaseUrl(true); // Force server-side behavior
+        expect(result).toBe('https://my-app.vercel.app');
+
+        // Cleanup
+        delete process.env.VERCEL_URL;
+      });
+
+      it('returns localhost with default port when no VERCEL_URL', () => {
+        const result = getBaseUrl(true); // Force server-side behavior
+        expect(result).toBe('http://localhost:3000');
+      });
+
+      it('returns localhost with custom PORT when set', () => {
+        process.env.PORT = '4000';
+
+        const result = getBaseUrl(true); // Force server-side behavior
+        expect(result).toBe('http://localhost:4000');
+
+        // Cleanup
+        delete process.env.PORT;
+      });
+    });
+
+    describe('getUrl', () => {
+      it('returns correct tRPC endpoint for browser', () => {
+        const result = getUrl();
+        expect(result).toBe('/api/trpc');
+      });
+
+      it('returns correct tRPC endpoint for Vercel', () => {
+        process.env.VERCEL_URL = 'my-app.vercel.app';
+
+        const result = getUrl(true); // Force server-side behavior
+        expect(result).toBe('https://my-app.vercel.app/api/trpc');
+
+        // Cleanup
+        delete process.env.VERCEL_URL;
+      });
+
+      it('returns correct tRPC endpoint for localhost', () => {
+        const result = getUrl(true); // Force server-side behavior
+        expect(result).toBe('http://localhost:3000/api/trpc');
+      });
     });
   });
 
@@ -255,6 +300,28 @@ describe('TRPC Client', () => {
     });
   });
 
+  describe('getQueryClient', () => {
+    it('returns query client in browser environment', () => {
+      const result = getQueryClient();
+      expect(result).toBe(mockQueryClient);
+    });
+
+    it('creates new query client in server environment', () => {
+      const result = getQueryClient(true); // Force server-side behavior
+      expect(result).toBe(mockQueryClient);
+    });
+
+    it('reuses browser query client on subsequent calls', () => {
+      // First call
+      const result1 = getQueryClient();
+      // Second call
+      const result2 = getQueryClient();
+
+      expect(result1).toBe(result2);
+      expect(result1).toBe(mockQueryClient);
+    });
+  });
+
   describe('Exported Functions', () => {
     it('exports TRPCProvider from createTRPCContext', () => {
       expect(TRPCProvider).toBeDefined();
@@ -271,6 +338,21 @@ describe('TRPC Client', () => {
       // This is more of a structural test to ensure they're exported correctly
       expect(TRPCProvider).toBeDefined();
       expect(useTRPC).toBeDefined();
+    });
+
+    it('exports getBaseUrl function', () => {
+      expect(getBaseUrl).toBeDefined();
+      expect(typeof getBaseUrl).toBe('function');
+    });
+
+    it('exports getUrl function', () => {
+      expect(getUrl).toBeDefined();
+      expect(typeof getUrl).toBe('function');
+    });
+
+    it('exports getQueryClient function', () => {
+      expect(getQueryClient).toBeDefined();
+      expect(typeof getQueryClient).toBe('function');
     });
   });
 });
