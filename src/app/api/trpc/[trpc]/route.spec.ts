@@ -40,7 +40,7 @@ describe('tRPC API Route Handler', () => {
 
     // Setup default mock implementations
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockCreateTRPCContext.mockResolvedValue({ db: {} as any });
+    mockCreateTRPCContext.mockResolvedValue({ db: {} as any, clientIP: '127.0.0.1' });
     mockFetchRequestHandler.mockResolvedValue(new Response('OK', { status: 200 }));
   });
 
@@ -410,7 +410,7 @@ describe('tRPC API Route Handler', () => {
 
     it('works with tRPC context creation', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockContext = { user: { id: '1' }, db: {} as any };
+      const mockContext = { user: { id: '1' }, db: {} as any, clientIP: '127.0.0.1' };
       mockCreateTRPCContext.mockResolvedValue(mockContext);
 
       const mockRequest = new Request('http://localhost:3000/api/trpc/hello');

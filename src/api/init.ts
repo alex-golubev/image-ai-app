@@ -1,28 +1,50 @@
 import { initTRPC } from '@trpc/server';
 import { cache } from 'react';
+import { headers } from 'next/headers';
 import { db } from '~/db';
 import { transformer } from '~/lib/transformer';
+
+/**
+ * Type definition for tRPC context
+ */
+export type TRPCContext = {
+  db: typeof db;
+  clientIP: string;
+};
 
 /**
  * Creates the tRPC context that will be available in all procedures.
  *
  * This function is cached using React's cache() to prevent multiple database
  * connections during server-side rendering. The context provides shared
- * resources like database connection to all tRPC procedures.
+ * resources like database connection and client IP to all tRPC procedures.
  *
- * @returns {Promise<{db: typeof db}>} Context object containing:
+ * @returns {Promise<TRPCContext>} Context object containing:
  *   - db: Database connection instance from Drizzle ORM
+ *   - clientIP: Client IP address for rate limiting and security
  *
  * @example
  * ```typescript
  * // Used internally by tRPC to create context for each request
  * const context = await createTRPCContext();
  * console.log(context.db); // Drizzle database instance
+ * console.log(context.clientIP); // Client IP address
  * ```
  */
-export const createTRPCContext = cache(async () => {
+export const createTRPCContext = cache(async (): Promise<TRPCContext> => {
+  const headersList = await headers();
+
+  // Get client IP from various possible headers
+  const clientIP =
+    headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    headersList.get('x-real-ip') ||
+    headersList.get('cf-connecting-ip') || // Cloudflare
+    headersList.get('x-client-ip') ||
+    '127.0.0.1'; // fallback for development
+
   return {
     db,
+    clientIP,
   };
 });
 
@@ -30,7 +52,7 @@ export const createTRPCContext = cache(async () => {
  * tRPC instance configured with SuperJSON transformer for handling
  * complex data types during serialization/deserialization.
  */
-const t = initTRPC.create({
+const t = initTRPC.context<TRPCContext>().create({
   transformer,
 });
 

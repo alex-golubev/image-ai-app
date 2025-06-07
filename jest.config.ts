@@ -19,6 +19,7 @@ const customJestConfig: Config = {
     '!src/**/*.d.ts',
     '!src/**/*.stories.{js,jsx,ts,tsx}',
   ],
+  coveragePathIgnorePatterns: ['node_modules/'],
   testMatch: ['<rootDir>/src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
   transformIgnorePatterns: ['node_modules/(?!(superjson|@neondatabase)/)'],
 };

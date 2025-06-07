@@ -1,0 +1,523 @@
+{
+  "info": {
+    "name": "Image AI App - tRPC API",
+    "description": "Коллекция для тестирования tRPC API пользователей",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Сохраняем ID созданного пользователя для других запросов",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.result && response.result.data && response.result.data[0]) {",
+                  "        pm.collectionVariables.set('userId', response.result.data[0].id);",
+                  "        console.log('User ID saved:', response.result.data[0].id);",
+                  "    }",
+                  "}",
+                  "",
+                  "// Проверяем успешность создания",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User created successfully', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.exist;",
+                  "    pm.expect(response.result.data).to.be.an('array');",
+                  "    pm.expect(response.result.data[0]).to.have.property('id');",
+                  "    pm.expect(response.result.data[0]).to.have.property('name');",
+                  "    pm.expect(response.result.data[0]).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"json\": {\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"SecurePass123!\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trpc/user.createUser",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trpc", "user.createUser"]
+            },
+            "description": "Создает нового пользователя с валидными данными"
+          }
+        },
+        {
+          "name": "Get All Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Users list returned', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.exist;",
+                  "    pm.expect(response.result.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trpc/user.getUsers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trpc", "user.getUsers"]
+            },
+            "description": "Получает список всех пользователей"
+          }
+        },
+        {
+          "name": "Get User By ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User returned', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.exist;",
+                  "    pm.expect(response.result.data).to.have.property('id');",
+                  "    pm.expect(response.result.data).to.have.property('name');",
+                  "    pm.expect(response.result.data).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"json\": {\n    \"id\": \"{{userId}}\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trpc/user.getUserById",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trpc", "user.getUserById"]
+            },
+            "description": "Получает пользователя по ID (использует сохраненный userId)"
+          }
+        },
+        {
+          "name": "Authenticate User - Success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Authentication successful', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.exist;",
+                  "    pm.expect(response.result.data).to.have.property('id');",
+                  "    pm.expect(response.result.data).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"json\": {\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"SecurePass123!\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trpc/user.authenticate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trpc", "user.authenticate"]
+            },
+            "description": "Аутентификация с правильными данными"
+          }
+        },
+        {
+          "name": "Authenticate User - Wrong Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 (tRPC error in response)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Authentication failed with error', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.error).to.exist;",
+                  "    pm.expect(response.error.data.code).to.equal('UNAUTHORIZED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"json\": {\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"WrongPassword123!\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trpc/user.authenticate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trpc", "user.authenticate"]
+            },
+            "description": "Аутентификация с неправильным паролем"
+          }
+        },
+        {
+          "name": "Update User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User updated successfully', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.exist;",
+                  "    pm.expect(response.result.data).to.be.an('array');",
+                  "    pm.expect(response.result.data[0]).to.have.property('id');",
+                  "    pm.expect(response.result.data[0].name).to.equal('Jane Doe Updated');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"json\": {\n    \"id\": \"{{userId}}\",\n    \"name\": \"Jane Doe Updated\",\n    \"email\": \"jane.updated@example.com\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trpc/user.updateUser",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trpc", "user.updateUser"]
+            },
+            "description": "Обновляет данные пользователя"
+          }
+        },
+        {
+          "name": "Delete User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User deleted successfully', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.result).to.exist;",
+                  "    pm.expect(response.result.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"json\": {\n    \"id\": \"{{userId}}\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trpc/user.deleteUser",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trpc", "user.deleteUser"]
+            },
+            "description": "Удаляет пользователя по ID"
+          }
+        }
+      ],
+      "description": "Операции с пользователями"
+    },
+    {
+      "name": "Validation Tests",
+      "item": [
+        {
+          "name": "Create User - Invalid Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 (tRPC error in response)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Validation error returned', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.error).to.exist;",
+                  "    pm.expect(response.error.data.code).to.equal('BAD_REQUEST');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"json\": {\n    \"name\": \"Test User\",\n    \"email\": \"invalid-email\",\n    \"password\": \"SecurePass123!\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trpc/user.createUser",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trpc", "user.createUser"]
+            },
+            "description": "Тест валидации - неправильный email"
+          }
+        },
+        {
+          "name": "Create User - Weak Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 (tRPC error in response)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Validation error returned', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.error).to.exist;",
+                  "    pm.expect(response.error.data.code).to.equal('BAD_REQUEST');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"json\": {\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"weak\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trpc/user.createUser",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trpc", "user.createUser"]
+            },
+            "description": "Тест валидации - слабый пароль"
+          }
+        },
+        {
+          "name": "Get User - Invalid UUID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 (tRPC error in response)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Validation error returned', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.error).to.exist;",
+                  "    pm.expect(response.error.data.code).to.equal('BAD_REQUEST');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"json\": {\n    \"id\": \"invalid-uuid\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trpc/user.getUserById",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trpc", "user.getUserById"]
+            },
+            "description": "Тест валидации - неправильный UUID"
+          }
+        }
+      ],
+      "description": "Тесты валидации данных"
+    },
+    {
+      "name": "Rate Limiting Tests",
+      "item": [
+        {
+          "name": "Multiple Failed Auth Attempts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Для первых 5 попыток ожидаем UNAUTHORIZED",
+                  "// Для 6-й попытки ожидаем TOO_MANY_REQUESTS",
+                  "const attemptNumber = pm.collectionVariables.get('authAttempt') || 1;",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (attemptNumber <= 5) {",
+                  "    pm.test('Authentication failed (attempt ' + attemptNumber + ')', function () {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response.error).to.exist;",
+                  "        pm.expect(response.error.data.code).to.equal('UNAUTHORIZED');",
+                  "    });",
+                  "} else {",
+                  "    pm.test('Rate limited (attempt ' + attemptNumber + ')', function () {",
+                  "        const response = pm.response.json();",
+                  "        pm.expect(response.error).to.exist;",
+                  "        pm.expect(response.error.data.code).to.equal('TOO_MANY_REQUESTS');",
+                  "    });",
+                  "}",
+                  "",
+                  "// Увеличиваем счетчик попыток",
+                  "pm.collectionVariables.set('authAttempt', attemptNumber + 1);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Инициализируем счетчик попыток",
+                  "if (!pm.collectionVariables.get('authAttempt')) {",
+                  "    pm.collectionVariables.set('authAttempt', 1);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"json\": {\n    \"email\": \"test@example.com\",\n    \"password\": \"WrongPassword123!\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trpc/user.authenticate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trpc", "user.authenticate"]
+            },
+            "description": "Тест rate limiting - запустите 6 раз подряд для проверки блокировки"
+          }
+        }
+      ],
+      "description": "Тесты ограничения скорости запросов"
+    }
+  ]
+}
