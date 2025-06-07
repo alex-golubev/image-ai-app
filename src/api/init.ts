@@ -1,4 +1,4 @@
-import { initTRPC, TRPCError } from '@trpc/server';
+import { initTRPC } from '@trpc/server';
 import { cache } from 'react';
 import { db } from '~/db';
 import { transformer } from '~/lib/transformer';
@@ -43,7 +43,7 @@ const t = initTRPC.create({
  * @example
  * ```typescript
  * export const userRouter = createTRPCRouter({
- *   getById: baseProcedure
+ *   getById: publicProcedure
  *     .input(z.object({ id: z.string() }))
  *     .query(({ input, ctx }) => {
  *       return ctx.db.select().from(users).where(eq(users.id, input.id));
@@ -54,198 +54,33 @@ const t = initTRPC.create({
 export const createTRPCRouter = t.router;
 
 /**
- * Base procedure that all other procedures should extend.
+ * Public procedure that can be used by anyone.
  *
- * This is the foundation for all tRPC procedures and includes
- * the context with database access. You can extend this to add
- * middleware for authentication, validation, etc.
+ * This is the base procedure that all other procedures should extend.
+ * It includes the context with database access.
  *
  * @example
  * ```typescript
- * // Public procedure (no auth required)
- * export const publicProcedure = baseProcedure;
- *
- * // Protected procedure (with auth middleware)
- * export const protectedProcedure = baseProcedure.use(authMiddleware);
+ * export const getUsers = publicProcedure
+ *   .query(({ ctx }) => {
+ *     return ctx.db.select().from(users);
+ *   });
  * ```
  */
-export const baseProcedure = t.procedure;
+export const publicProcedure = t.procedure;
 
 /**
- * Error handling middleware that automatically converts service errors
- * to appropriate tRPC errors with proper HTTP status codes.
- */
-const errorHandlingMiddleware = t.middleware(async ({ next }) => {
-  try {
-    return await next();
-  } catch (error) {
-    if (error instanceof TRPCError) {
-      // Re-throw tRPC errors as-is
-      throw error;
-    }
-
-    if (error instanceof Error) {
-      // Map specific error messages to HTTP codes
-      if (error.message.includes('already exists')) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: error.message,
-        });
-      }
-
-      if (error.message.includes('not found')) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: error.message,
-        });
-      }
-
-      if (error.message.includes('unauthorized') || error.message.includes('forbidden')) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: error.message,
-        });
-      }
-
-      if (error.message.includes('validation') || error.message.includes('invalid')) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: error.message,
-        });
-      }
-
-      // Default to internal server error
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: error.message,
-      });
-    }
-
-    // Unknown error type
-    throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'Unknown error occurred',
-    });
-  }
-});
-
-/**
- * Procedure with automatic error handling.
+ * Creates a server-side caller factory for the given router.
+ * This allows you to call tRPC procedures directly on the server.
  *
- * Use this instead of baseProcedure when you want automatic
- * error handling that converts service errors to tRPC errors.
- */
-export const safeProcedure = baseProcedure.use(errorHandlingMiddleware);
-
-/**
- * Factory for creating server-side callers.
- *
- * This allows you to call tRPC procedures directly on the server
- * without going through HTTP. Useful for server components,
- * API routes, and server actions.
+ * @param router - The tRPC router to create a caller for
+ * @returns A factory function that creates a caller with the given context
  *
  * @example
  * ```typescript
  * const createCaller = createCallerFactory(appRouter);
  * const caller = createCaller(await createTRPCContext());
- * const result = await caller.user.getById({ id: '123' });
+ * const users = await caller.user.getAll();
  * ```
  */
 export const createCallerFactory = t.createCallerFactory;
-
-/**
- * Utility function for manual error handling in procedures.
- *
- * Use this when you need more control over error handling
- * or want to add custom logic before error conversion.
- *
- * @param fn - Async function to execute
- * @param customErrorMap - Optional custom error mapping
- * @returns Promise with the result or throws tRPC error
- *
- * @example
- * ```typescript
- * export const customProcedure = baseProcedure
- *   .mutation(async ({ input }) => {
- *     return await handleErrors(async () => {
- *       // Your logic here
- *       return await someService(input);
- *     }, {
- *       'custom error': 'BAD_REQUEST'
- *     });
- *   });
- * ```
- */
-export const handleErrors = async <T>(
-  fn: () => Promise<T>,
-  customErrorMap?: Record<
-    string,
-    | 'BAD_REQUEST'
-    | 'UNAUTHORIZED'
-    | 'FORBIDDEN'
-    | 'NOT_FOUND'
-    | 'CONFLICT'
-    | 'INTERNAL_SERVER_ERROR'
-  >,
-): Promise<T> => {
-  try {
-    return await fn();
-  } catch (error) {
-    if (error instanceof TRPCError) {
-      throw error;
-    }
-
-    if (error instanceof Error) {
-      // Check custom error mappings first
-      if (customErrorMap) {
-        for (const [errorText, code] of Object.entries(customErrorMap)) {
-          if (error.message.includes(errorText)) {
-            throw new TRPCError({
-              code,
-              message: error.message,
-            });
-          }
-        }
-      }
-
-      // Default mappings
-      if (error.message.includes('already exists')) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: error.message,
-        });
-      }
-
-      if (error.message.includes('not found')) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: error.message,
-        });
-      }
-
-      if (error.message.includes('unauthorized') || error.message.includes('forbidden')) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: error.message,
-        });
-      }
-
-      if (error.message.includes('validation') || error.message.includes('invalid')) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: error.message,
-        });
-      }
-
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: error.message,
-      });
-    }
-
-    throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'Unknown error occurred',
-    });
-  }
-};

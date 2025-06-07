@@ -29,6 +29,16 @@ const handler = (req: Request) =>
     endpoint: '/api/trpc',
     req,
     createContext: createTRPCContext,
+    onError: ({ error, type, path }) => {
+      // Log all errors for debugging
+      console.error(`❌ tRPC failed on ${path ?? 'unknown'} (${type}):`, error);
+
+      // In production, you might want to send critical errors to a monitoring service
+      if (error.code === 'INTERNAL_SERVER_ERROR') {
+        // Example: send to bug reporting service
+        // bugReporting.captureException(error, { path });
+      }
+    },
   });
 
 /**

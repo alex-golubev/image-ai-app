@@ -20,23 +20,33 @@ let browserQueryClient: QueryClient;
 /**
  * Gets or creates a QueryClient instance
  * Creates a new instance on server-side (SSR) and reuses singleton on client-side
+ * @param isServer - Optional parameter to force server-side behavior for testing
  * @returns QueryClient instance
  */
-const getQueryClient = () =>
-  typeof window === 'undefined' ? makeQueryClient() : (browserQueryClient ??= makeQueryClient());
+export const getQueryClient = (isServer?: boolean) => {
+  const isServerSide = isServer ?? typeof window === 'undefined';
+  return isServerSide ? makeQueryClient() : (browserQueryClient ??= makeQueryClient());
+};
+
+/**
+ * Generates the base URL based on environment
+ * @param isServer - Optional parameter to force server-side behavior for testing
+ * @returns The base URL for the application
+ */
+export const getBaseUrl = (isServer?: boolean) => {
+  const isServerSide = isServer ?? typeof window === 'undefined';
+  if (!isServerSide) return '';
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return `http://localhost:${process.env.PORT ?? 3000}`;
+};
 
 /**
  * Generates the appropriate tRPC endpoint URL based on environment
+ * @param isServer - Optional parameter to force server-side behavior for testing
  * @returns The complete tRPC API endpoint URL
  */
-const getUrl = () => {
-  const baseUrl = (() => {
-    if (typeof window !== 'undefined') return '';
-    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-    return `http://localhost:${process.env.PORT ?? 3000}`;
-  })();
-
-  return `${baseUrl}/api/trpc`;
+export const getUrl = (isServer?: boolean) => {
+  return `${getBaseUrl(isServer)}/api/trpc`;
 };
 
 /**
