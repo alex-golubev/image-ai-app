@@ -23,6 +23,7 @@ export const userSchema = z
     email: z.string().email(),
     password: z.string(), // Stored password is already hashed
     avatar: z.string().optional(),
+    isActive: z.boolean().optional(),
   })
   .merge(timestampsSchema);
 
@@ -49,6 +50,7 @@ export const updateUserSchema = z.object({
   email: z.string().email().optional(),
   password: passwordSchema.optional(),
   avatar: z.string().optional(),
+  isActive: z.boolean().optional(),
 });
 
 /**

@@ -147,12 +147,12 @@ export const clearRateLimit = (): void => {
  */
 export const startCleanupInterval = (intervalMs = 10 * 60 * 1000): NodeJS.Timeout | null => {
   if (typeof setInterval !== 'undefined') {
-    /* istanbul ignore next 3 */
+    /* c8 ignore next 3 */
     return setInterval(() => {
       cleanupRateLimit();
     }, intervalMs);
   }
-  /* istanbul ignore next */
+  /* c8 ignore next */
   return null;
 };
 
@@ -171,5 +171,5 @@ export const authRateLimit = {
 };
 
 // Start automatic cleanup every 10 minutes
-/* istanbul ignore next */
+/* c8 ignore next */
 startCleanupInterval();

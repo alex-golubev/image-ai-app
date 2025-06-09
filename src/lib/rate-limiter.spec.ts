@@ -260,6 +260,38 @@ describe('Rate Limiter', () => {
       expect(authRateLimit.isLimited(testIP)).toBe(false);
       expect(authRateLimit.getStats(testIP)).toBeNull();
     });
+
+    it('should cleanup old entries using convenience method', () => {
+      authRateLimit.recordFailed(testIP);
+
+      // Fast-forward time past the default window (15 minutes)
+      jest.advanceTimersByTime(16 * 60 * 1000);
+
+      authRateLimit.cleanup();
+      expect(authRateLimit.getStats(testIP)).toBeNull();
+    });
+
+    it('should start cleanup interval using convenience method', () => {
+      const mockInterval = { id: 'test-interval' };
+      const mockSetInterval = jest.fn().mockReturnValue(mockInterval);
+      const originalSetInterval = global.setInterval;
+      global.setInterval = mockSetInterval;
+
+      const intervalId = authRateLimit.startCleanup(5000);
+
+      expect(mockSetInterval).toHaveBeenCalledWith(expect.any(Function), 5000);
+      expect(intervalId).toBe(mockInterval);
+
+      // Test that the callback function works
+      const cleanupCallback = mockSetInterval.mock.calls[0][0];
+      expect(typeof cleanupCallback).toBe('function');
+
+      // Execute the callback to cover the cleanupRateLimit() call
+      expect(() => cleanupCallback()).not.toThrow();
+
+      // Restore original setInterval
+      global.setInterval = originalSetInterval;
+    });
   });
 
   describe('Configuration override', () => {

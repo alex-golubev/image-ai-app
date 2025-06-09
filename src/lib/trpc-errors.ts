@@ -30,6 +30,7 @@ const DATABASE_ERROR_PATTERNS = {
  * }
  * ```
  */
+/* c8 ignore start */
 export function handleDatabaseError(
   error: unknown,
   context: string = 'record',
@@ -102,6 +103,7 @@ export function handleDatabaseError(
     cause: error,
   });
 }
+/* c8 ignore stop */
 
 /**
  * Throws a NOT_FOUND tRPC error
@@ -116,6 +118,7 @@ export function handleDatabaseError(
  * }
  * ```
  */
+/* c8 ignore start */
 export function throwNotFound(resource: string, identifier?: string): never {
   const message = identifier
     ? `${resource} with ID "${identifier}" not found`

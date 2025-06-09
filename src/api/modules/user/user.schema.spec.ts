@@ -13,6 +13,7 @@ describe('User Schemas', () => {
       email: 'john@example.com',
       password: 'hashedPassword123',
       avatar: 'https://example.com/avatar.jpg',
+      isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -165,6 +166,16 @@ describe('User Schemas', () => {
       };
 
       const result = updateUserSchema.safeParse(partialUpdate);
+      expect(result.success).toBe(true);
+    });
+
+    it('validates update with isActive field', () => {
+      const updateWithIsActive = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        isActive: false,
+      };
+
+      const result = updateUserSchema.safeParse(updateWithIsActive);
       expect(result.success).toBe(true);
     });
 
