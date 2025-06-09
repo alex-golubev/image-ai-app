@@ -16,7 +16,6 @@ export default async function Home(): Promise<JSX.Element> {
         <h1 className="text-4xl" data-testid="main-heading">
           image AI
         </h1>
-        {/* <Title /> */}
       </main>
     </HydrationBoundary>
   );
