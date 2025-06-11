@@ -2,14 +2,11 @@ name: Build Check
 
 on:
   schedule:
-    # Проверяем сборку каждый день в 6:00 UTC
     - cron: '0 6 * * *'
   workflow_dispatch:
-    # Позволяет запускать вручную
   push:
     branches: [main]
     paths:
-      # Запускаем только при изменении файлов, влияющих на сборку
       - 'package.json'
       - 'package-lock.json'
       - 'next.config.js'
