@@ -4,11 +4,30 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ### 1. Environment Setup
 
-Create a `.env.local` file in the root directory with the following variables:
+You can develop either locally with Docker or connect to a remote Supabase project.
+
+#### Option A: Local Development (Recommended)
+
+1. Install and start Docker Desktop
+2. Run local Supabase:
+   ```bash
+   npm run supabase:start
+   ```
+3. Create `.env.local` with local credentials:
+   ```bash
+   # Local Supabase (from supabase start output)
+   NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
+   NEXT_PUBLIC_SUPABASE_ANON_KEY="[local-anon-key]"
+   POSTGRES_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+   ```
+
+#### Option B: Remote Supabase Project
+
+Create a `.env.local` file with your Supabase project credentials:
 
 ```bash
 # Database
-DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
+POSTGRES_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL="https://[YOUR-PROJECT-REF].supabase.co"
@@ -19,6 +38,8 @@ SUPABASE_SERVICE_ROLE_KEY="[YOUR-SERVICE-ROLE-KEY]"
 ```
 
 Replace the placeholders with your actual Supabase project credentials.
+
+📖 **See [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md) for detailed local setup instructions.**
 
 ### 2. Install Dependencies
 

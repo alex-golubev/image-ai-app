@@ -11,7 +11,8 @@ export const supabase = createClient(
 );
 
 // Create postgres connection for Drizzle ORM
-const connectionString = process.env.DATABASE_URL!;
+// Support both POSTGRES_URL (local) and DATABASE_URL (production)
+const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL!;
 const client = postgres(connectionString);
 
 export const db = drizzle(client, { schema, casing: 'snake_case' });

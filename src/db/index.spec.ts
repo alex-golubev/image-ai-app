@@ -42,6 +42,7 @@ describe('Database Index', () => {
     it('initializes postgres client with DATABASE_URL', async () => {
       const testUrl = 'postgresql://user:pass@host:5432/db';
       process.env.DATABASE_URL = testUrl;
+      delete process.env.POSTGRES_URL;
       process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 
@@ -59,6 +60,29 @@ describe('Database Index', () => {
 
       expect(mockPostgres).toHaveBeenCalledWith(testUrl);
       expect(mockCreateClient).toHaveBeenCalledWith('https://test.supabase.co', 'test-anon-key');
+    });
+
+    it('initializes postgres client with POSTGRES_URL (local development)', async () => {
+      const testUrl = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+      process.env.POSTGRES_URL = testUrl;
+      delete process.env.DATABASE_URL;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'local-anon-key';
+
+      // Mock return values
+      const mockClient = jest.fn();
+      const mockDb = { query: jest.fn() };
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
+      mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
+
+      // Re-import the module to trigger initialization
+      jest.resetModules();
+      await import('~/db/index');
+
+      expect(mockPostgres).toHaveBeenCalledWith(testUrl);
+      expect(mockCreateClient).toHaveBeenCalledWith('http://127.0.0.1:54321', 'local-anon-key');
     });
 
     it('calls drizzle with correct parameters', async () => {
