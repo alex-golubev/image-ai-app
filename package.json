@@ -22,6 +22,8 @@
     "supabase:dashboard": "open http://127.0.0.1:54323",
     "supabase:reset": "supabase db reset",
     "supabase:migration": "supabase migration new",
+    "supabase:logs": "supabase logs",
+    "dev:full": "npm run supabase:start && npm run dev",
     "prepare": "husky"
   },
   "dependencies": {

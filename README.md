@@ -1,43 +1,51 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+## 🚀 Быстрый старт
 
-### 1. Environment Setup
+### Локальная разработка
 
-You can develop either locally with Docker or connect to a remote Supabase project.
-
-#### Option A: Local Development (Recommended)
-
-1. Install and start Docker Desktop
-2. Run local Supabase:
-   ```bash
-   npm run supabase:start
-   ```
-3. Create `.env.local` with local credentials:
-   ```bash
-   # Local Supabase (from supabase start output)
-   NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
-   NEXT_PUBLIC_SUPABASE_ANON_KEY="[local-anon-key]"
-   POSTGRES_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
-   ```
-
-#### Option B: Remote Supabase Project
-
-Create a `.env.local` file with your Supabase project credentials:
+1. **Установите зависимости:**
 
 ```bash
-# Database
-POSTGRES_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
-
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL="https://[YOUR-PROJECT-REF].supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="[YOUR-ANON-KEY]"
-
-# Optional: For server-side operations (if needed)
-SUPABASE_SERVICE_ROLE_KEY="[YOUR-SERVICE-ROLE-KEY]"
+npm install
 ```
 
-Replace the placeholders with your actual Supabase project credentials.
+2. **Запустите локальный Supabase:**
+
+```bash
+npm run supabase:start
+```
+
+3. **Создайте файл `.env.local`:**
+
+```bash
+# Локальная разработка
+POSTGRES_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+```
+
+4. **Запустите приложение:**
+
+```bash
+npm run dev
+```
+
+5. **Откройте Supabase Studio:**
+
+```bash
+npm run supabase:dashboard
+```
+
+### Продакшн (Vercel + Supabase Cloud)
+
+Для продакшн среды используйте переменные окружения Supabase Cloud:
+
+```bash
+DATABASE_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres"
+NEXT_PUBLIC_SUPABASE_URL="https://[PROJECT-REF].supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="[ANON-KEY]"
+```
 
 📖 **See [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md) for detailed local setup instructions.**
 
