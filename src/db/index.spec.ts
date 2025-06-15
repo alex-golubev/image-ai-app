@@ -1,12 +1,16 @@
-// Mock Neon database
-const mockNeon = jest.fn();
-jest.mock('@neondatabase/serverless', () => ({
-  neon: mockNeon,
+// Mock Supabase client
+const mockCreateClient = jest.fn();
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: mockCreateClient,
 }));
+
+// Mock postgres client
+const mockPostgres = jest.fn();
+jest.mock('postgres', () => mockPostgres);
 
 // Mock Drizzle ORM
 const mockDrizzle = jest.fn();
-jest.mock('drizzle-orm/neon-http', () => ({
+jest.mock('drizzle-orm/postgres-js', () => ({
   drizzle: mockDrizzle,
 }));
 
@@ -35,51 +39,88 @@ describe('Database Index', () => {
   });
 
   describe('Database Initialization', () => {
-    it('initializes Neon client with DATABASE_URL', async () => {
+    it('initializes postgres client with DATABASE_URL', async () => {
       const testUrl = 'postgresql://user:pass@host:5432/db';
       process.env.DATABASE_URL = testUrl;
+      delete process.env.POSTGRES_URL;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 
       // Mock return values
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       // Re-import the module to trigger initialization
       jest.resetModules();
       await import('~/db/index');
 
-      expect(mockNeon).toHaveBeenCalledWith(testUrl);
+      expect(mockPostgres).toHaveBeenCalledWith(testUrl);
+      expect(mockCreateClient).toHaveBeenCalledWith('https://test.supabase.co', 'test-anon-key');
+    });
+
+    it('initializes postgres client with POSTGRES_URL (local development)', async () => {
+      const testUrl = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+      process.env.POSTGRES_URL = testUrl;
+      delete process.env.DATABASE_URL;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'local-anon-key';
+
+      // Mock return values
+      const mockClient = jest.fn();
+      const mockDb = { query: jest.fn() };
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
+      mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
+
+      // Re-import the module to trigger initialization
+      jest.resetModules();
+      await import('~/db/index');
+
+      expect(mockPostgres).toHaveBeenCalledWith(testUrl);
+      expect(mockCreateClient).toHaveBeenCalledWith('http://127.0.0.1:54321', 'local-anon-key');
     });
 
     it('calls drizzle with correct parameters', async () => {
       const testUrl = 'postgresql://user:pass@host:5432/db';
       process.env.DATABASE_URL = testUrl;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 
       // Mock return values
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       // Re-import the module to trigger initialization
       jest.resetModules();
       await import('~/db/index');
 
-      expect(mockDrizzle).toHaveBeenCalledWith(mockSql, {
+      expect(mockDrizzle).toHaveBeenCalledWith(mockClient, {
         schema: expect.objectContaining(mockSchema),
         casing: 'snake_case',
       });
     });
 
-    it('exports db instance', async () => {
+    it('exports db and supabase instances', async () => {
       process.env.DATABASE_URL = 'postgresql://user:pass@host:5432/db';
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 
       // Mock return values
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn(), select: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       // Re-import the module
       jest.resetModules();
@@ -87,17 +128,40 @@ describe('Database Index', () => {
 
       expect(dbModule.db).toBeDefined();
       expect(dbModule.db).toBe(mockDb);
+      expect(dbModule.supabase).toBeDefined();
+      expect(dbModule.supabase).toBe(mockSupabase);
     });
 
     it('throws error when DATABASE_URL is not provided', async () => {
       delete process.env.DATABASE_URL;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 
-      // Mock Neon to throw error when DATABASE_URL is undefined
-      mockNeon.mockImplementation((url) => {
+      // Mock postgres to throw error when DATABASE_URL is undefined
+      mockPostgres.mockImplementation((url: string) => {
         if (!url) {
           throw new Error('DATABASE_URL is required');
         }
         return jest.fn();
+      });
+
+      // Re-import the module
+      jest.resetModules();
+
+      await expect(import('~/db/index')).rejects.toThrow();
+    });
+
+    it('throws error when Supabase environment variables are not provided', async () => {
+      process.env.DATABASE_URL = 'postgresql://user:pass@host:5432/db';
+      delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+      delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+      // Mock createClient to throw error when env vars are undefined
+      mockCreateClient.mockImplementation((url: string, key: string) => {
+        if (!url || !key) {
+          throw new Error('Supabase environment variables are required');
+        }
+        return { auth: jest.fn() };
       });
 
       // Re-import the module
@@ -110,13 +174,17 @@ describe('Database Index', () => {
   describe('Database Configuration', () => {
     beforeEach(() => {
       process.env.DATABASE_URL = 'postgresql://user:pass@host:5432/db';
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
     });
 
     it('configures snake_case casing', async () => {
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       jest.resetModules();
       await import('~/db/index');
@@ -126,10 +194,12 @@ describe('Database Index', () => {
     });
 
     it('includes schema in configuration', async () => {
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       jest.resetModules();
       await import('~/db/index');
@@ -138,17 +208,19 @@ describe('Database Index', () => {
       expect(drizzleCall[1].schema).toEqual(expect.objectContaining(mockSchema));
     });
 
-    it('passes Neon SQL client to Drizzle', async () => {
-      const mockSql = jest.fn();
+    it('passes postgres client to Drizzle', async () => {
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       jest.resetModules();
       await import('~/db/index');
 
       const drizzleCall = mockDrizzle.mock.calls[0];
-      expect(drizzleCall[0]).toBe(mockSql);
+      expect(drizzleCall[0]).toBe(mockClient);
     });
   });
 
@@ -156,38 +228,45 @@ describe('Database Index', () => {
     it('handles different DATABASE_URL formats', async () => {
       const testUrls = [
         'postgresql://user:pass@localhost:5432/db',
-        'postgresql://user:pass@neon.tech:5432/db?sslmode=require',
+        'postgresql://user:pass@db.supabase.co:5432/db?sslmode=require',
         'postgres://user:pass@host:5432/db',
       ];
 
       for (const url of testUrls) {
         process.env.DATABASE_URL = url;
+        process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 
-        const mockSql = jest.fn();
+        const mockClient = jest.fn();
         const mockDb = { query: jest.fn() };
-        mockNeon.mockReturnValue(mockSql);
+        const mockSupabase = { auth: jest.fn() };
+        mockPostgres.mockReturnValue(mockClient);
         mockDrizzle.mockReturnValue(mockDb);
+        mockCreateClient.mockReturnValue(mockSupabase);
 
         jest.resetModules();
         await import('~/db/index');
 
-        expect(mockNeon).toHaveBeenCalledWith(url);
+        expect(mockPostgres).toHaveBeenCalledWith(url);
         jest.clearAllMocks();
       }
     });
 
-    it('uses non-null assertion for DATABASE_URL', async () => {
-      // This test ensures that the code uses DATABASE_URL! (non-null assertion)
+    it('uses non-null assertion for environment variables', async () => {
       process.env.DATABASE_URL = 'postgresql://user:pass@host:5432/db';
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       jest.resetModules();
 
-      // Should not throw with valid URL
+      // Should not throw with valid environment variables
       await expect(import('~/db/index')).resolves.toBeDefined();
     });
   });
@@ -195,26 +274,33 @@ describe('Database Index', () => {
   describe('Module Exports', () => {
     beforeEach(() => {
       process.env.DATABASE_URL = 'postgresql://user:pass@host:5432/db';
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
     });
 
-    it('exports only db instance', async () => {
-      const mockSql = jest.fn();
+    it('exports db and supabase instances', async () => {
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       jest.resetModules();
       const dbModule = await import('~/db/index');
 
       const exports = Object.keys(dbModule);
-      expect(exports).toEqual(['db']);
+      expect(exports).toContain('db');
+      expect(exports).toContain('supabase');
     });
 
     it('exports db as named export', async () => {
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       jest.resetModules();
       const { db } = await import('~/db/index');
@@ -223,8 +309,23 @@ describe('Database Index', () => {
       expect(db).toBe(mockDb);
     });
 
+    it('exports supabase as named export', async () => {
+      const mockClient = jest.fn();
+      const mockDb = { query: jest.fn() };
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
+      mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
+
+      jest.resetModules();
+      const { supabase } = await import('~/db/index');
+
+      expect(supabase).toBeDefined();
+      expect(supabase).toBe(mockSupabase);
+    });
+
     it('db instance has expected Drizzle methods', async () => {
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = {
         query: jest.fn(),
         select: jest.fn(),
@@ -233,8 +334,10 @@ describe('Database Index', () => {
         delete: jest.fn(),
         transaction: jest.fn(),
       };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       jest.resetModules();
       const { db } = await import('./index');
@@ -252,29 +355,40 @@ describe('Database Index', () => {
   describe('Integration', () => {
     beforeEach(() => {
       process.env.DATABASE_URL = 'postgresql://user:pass@host:5432/db';
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
     });
 
     it('creates a complete database connection chain', async () => {
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       jest.resetModules();
       await import('./index');
 
-      // Verify the complete chain: DATABASE_URL -> neon() -> drizzle() -> db
-      expect(mockNeon).toHaveBeenCalledTimes(1);
+      // Verify the complete chain: DATABASE_URL -> postgres() -> drizzle() -> db
+      expect(mockPostgres).toHaveBeenCalledTimes(1);
       expect(mockDrizzle).toHaveBeenCalledTimes(1);
-      expect(mockNeon).toHaveBeenCalledWith(process.env.DATABASE_URL);
-      expect(mockDrizzle).toHaveBeenCalledWith(mockSql, expect.any(Object));
+      expect(mockCreateClient).toHaveBeenCalledTimes(1);
+      expect(mockPostgres).toHaveBeenCalledWith(process.env.DATABASE_URL);
+      expect(mockDrizzle).toHaveBeenCalledWith(mockClient, expect.any(Object));
+      expect(mockCreateClient).toHaveBeenCalledWith(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      );
     });
 
     it('maintains consistent configuration across imports', async () => {
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       jest.resetModules();
 
@@ -284,17 +398,21 @@ describe('Database Index', () => {
 
       // Should be the same instance (module caching)
       expect(import1.db).toBe(import2.db);
+      expect(import1.supabase).toBe(import2.supabase);
 
-      // Neon and Drizzle should only be called once due to module caching
-      expect(mockNeon).toHaveBeenCalledTimes(1);
+      // Postgres, Drizzle, and Supabase should only be called once due to module caching
+      expect(mockPostgres).toHaveBeenCalledTimes(1);
       expect(mockDrizzle).toHaveBeenCalledTimes(1);
+      expect(mockCreateClient).toHaveBeenCalledTimes(1);
     });
 
     it('works with schema import', async () => {
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       jest.resetModules();
       await import('./index');
@@ -306,10 +424,12 @@ describe('Database Index', () => {
   });
 
   describe('Error Handling', () => {
-    it('handles Neon initialization errors', async () => {
+    it('handles postgres initialization errors', async () => {
       process.env.DATABASE_URL = 'invalid-url';
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 
-      mockNeon.mockImplementation(() => {
+      mockPostgres.mockImplementation(() => {
         throw new Error('Invalid database URL');
       });
 
@@ -320,9 +440,13 @@ describe('Database Index', () => {
 
     it('handles Drizzle initialization errors', async () => {
       process.env.DATABASE_URL = 'postgresql://user:pass@host:5432/db';
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 
-      const mockSql = jest.fn();
-      mockNeon.mockReturnValue(mockSql);
+      const mockClient = jest.fn();
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
+      mockCreateClient.mockReturnValue(mockSupabase);
       mockDrizzle.mockImplementation(() => {
         throw new Error('Drizzle initialization failed');
       });
@@ -332,8 +456,37 @@ describe('Database Index', () => {
       await expect(import('./index')).rejects.toThrow('Drizzle initialization failed');
     });
 
+    it('handles Supabase initialization errors', async () => {
+      process.env.DATABASE_URL = 'postgresql://user:pass@host:5432/db';
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
+
+      const mockClient = jest.fn();
+      mockPostgres.mockReturnValue(mockClient);
+      mockCreateClient.mockImplementation(() => {
+        throw new Error('Supabase initialization failed');
+      });
+
+      jest.resetModules();
+
+      await expect(import('./index')).rejects.toThrow('Supabase initialization failed');
+    });
+
     it('handles missing DATABASE_URL gracefully', async () => {
       delete process.env.DATABASE_URL;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
+
+      jest.resetModules();
+
+      // The non-null assertion should cause this to fail
+      await expect(import('./index')).rejects.toThrow();
+    });
+
+    it('handles missing Supabase environment variables gracefully', async () => {
+      process.env.DATABASE_URL = 'postgresql://user:pass@host:5432/db';
+      delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+      delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
       jest.resetModules();
 
@@ -345,17 +498,21 @@ describe('Database Index', () => {
   describe('Type Safety', () => {
     beforeEach(() => {
       process.env.DATABASE_URL = 'postgresql://user:pass@host:5432/db';
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
     });
 
     it('maintains TypeScript types through the chain', async () => {
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = {
         query: jest.fn(),
         $inferSelect: jest.fn(),
         $inferInsert: jest.fn(),
       };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       jest.resetModules();
       const { db } = await import('./index');
@@ -365,10 +522,12 @@ describe('Database Index', () => {
     });
 
     it('preserves schema types in db instance', async () => {
-      const mockSql = jest.fn();
+      const mockClient = jest.fn();
       const mockDb = { query: jest.fn() };
-      mockNeon.mockReturnValue(mockSql);
+      const mockSupabase = { auth: jest.fn() };
+      mockPostgres.mockReturnValue(mockClient);
       mockDrizzle.mockReturnValue(mockDb);
+      mockCreateClient.mockReturnValue(mockSupabase);
 
       jest.resetModules();
       await import('./index');

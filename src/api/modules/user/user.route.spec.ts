@@ -24,7 +24,7 @@ global.TextEncoder = class TextEncoder {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any;
 
-// Mock database to avoid Neon connection issues
+// Mock database to avoid connection issues during testing
 jest.mock('~/db', () => ({
   db: {
     select: jest.fn(),
