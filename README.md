@@ -2,6 +2,40 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### 1. Environment Setup
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```bash
+# Database
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL="https://[YOUR-PROJECT-REF].supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="[YOUR-ANON-KEY]"
+
+# Optional: For server-side operations (if needed)
+SUPABASE_SERVICE_ROLE_KEY="[YOUR-SERVICE-ROLE-KEY]"
+```
+
+Replace the placeholders with your actual Supabase project credentials.
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Database Setup
+
+Run database migrations:
+
+```bash
+npm run drizzle:push
+```
+
+### 4. Development Server
+
 First, run the development server:
 
 ```bash
